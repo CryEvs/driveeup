@@ -1,0 +1,134 @@
+:root {
+  --brand: #96ea28;
+  --brand-dark: #74c515;
+}
+
+body, html, #root {
+  margin: 0;
+  min-height: 100%;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+body.theme-light {
+  background: #f4fbe9;
+  color: #1d2a08;
+}
+
+body.theme-dark {
+  background: #0d1a0d;
+  color: #e7f8d7;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #d7efb5;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+body.theme-dark .auth-card,
+body.theme-dark .content-card,
+body.theme-dark .sidebar {
+  background: #162514;
+  border-color: #3c652d;
+}
+
+input, select, button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #b4d98b;
+  background: #fff;
+}
+
+body.theme-dark input,
+body.theme-dark select,
+body.theme-dark button {
+  color: #e7f8d7;
+  background: #1e321b;
+  border-color: #4f7a3f;
+}
+
+button {
+  background: var(--brand);
+  border-color: var(--brand-dark);
+  font-weight: 700;
+  cursor: pointer;
+  color: #1d2a08;
+}
+
+.error {
+  color: #c93232;
+  margin-top: 8px;
+}
+
+.switch-link a { color: #3a6b0f; }
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  padding: 16px;
+  border-right: 1px solid #d8edbc;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #f2fbe4;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: #20310c;
+  background: #e4f7cb;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.theme-zone { margin-top: 14px; }
+.coins { margin-top: 10px; font-weight: 700; }
+.logout { margin-top: 10px; }
+
+.content-wrap { padding: 20px; }
+.content-card {
+  max-width: 900px;
+  background: #fff;
+  border: 1px solid #d7efb5;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.profile-block {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--brand);
+}
+
+.upload-label input { display: block; margin-top: 8px; }
