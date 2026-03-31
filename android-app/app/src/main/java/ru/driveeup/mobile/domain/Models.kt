@@ -10,3 +10,8 @@ data class User(
     val premium: Boolean,
     val avatarUrl: String? = null
 )
+
+data class AuthResult(
+    val accessToken: String,
+    val user: User
+)
