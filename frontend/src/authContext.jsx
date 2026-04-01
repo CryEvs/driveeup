@@ -39,6 +39,12 @@ export function AuthProvider({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('driveeup_theme') || 'light')
 
   useEffect(() => {
+    if (token) return
+    const t = readStoredOrAndroidToken()
+    if (t) setToken(t)
+  }, [token])
+
+  useEffect(() => {
     document.body.className = theme === 'dark' ? 'theme-dark' : 'theme-light'
     localStorage.setItem('driveeup_theme', theme)
   }, [theme])

@@ -27,6 +27,13 @@ export function CrossyGameShell({
 
   const blocked = cooldownMs > 0
   const showClose = variant === 'modal' || (variant === 'page' && !embed)
+  const webToken =
+    token ??
+    localStorage.getItem('driveeup_token') ??
+    (typeof window !== 'undefined' && window.AndroidAuth && typeof window.AndroidAuth.getToken === 'function'
+      ? window.AndroidAuth.getToken()
+      : '') ??
+    ''
 
   return (
     <div className="crossy-page__main">
@@ -74,7 +81,7 @@ export function CrossyGameShell({
               ))}
             <GameCanvas onReady={() => setGameReady(true)} />
             <CrossyUI
-              token={token ?? localStorage.getItem('driveeup_token') ?? ''}
+              token={webToken}
               embed={embed}
               onClaimSuccess={onClaimSuccess}
             />

@@ -14,15 +14,35 @@ export function CrossyUI({ token, embed, onClaimSuccess }) {
   const [claimed, setClaimed] = useState(false)
   const [claimErr, setClaimErr] = useState(null)
 
+  function resolveToken() {
+    if (token) return token
+    try {
+      const fromLs = localStorage.getItem('driveeup_token')
+      if (fromLs) return fromLs
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (typeof window !== 'undefined' && window.AndroidAuth?.getToken) {
+        const fromBridge = String(window.AndroidAuth.getToken() || '')
+        if (fromBridge) return fromBridge
+      }
+    } catch {
+      /* ignore */
+    }
+    return ''
+  }
+
   async function handleClaim() {
-    if (!token) {
+    const claimToken = resolveToken()
+    if (!claimToken) {
       setClaimErr('Войди в аккаунт, чтобы получить DriveCoin')
       return
     }
     setClaiming(true)
     setClaimErr(null)
     try {
-      await claimDriveCoin(lanesPassed, token)
+      await claimDriveCoin(lanesPassed, claimToken)
       setClaimed(true)
       startCrossRoadCooldown()
       try {
