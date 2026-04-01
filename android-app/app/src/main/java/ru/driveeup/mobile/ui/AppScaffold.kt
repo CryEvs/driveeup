@@ -204,8 +204,11 @@ private fun AppContent(
                         onOpenGames = { page = AppPage.GAMES },
                         onOpenBattlePass = { page = AppPage.BATTLE_PASS }
                     )
-                    AppPage.GAMES -> GamesScreen()
-                    AppPage.BATTLE_PASS -> BattlePassScreen(token = state.token)
+                    AppPage.GAMES -> GamesScreen(onBack = { page = AppPage.DRIVE_UP })
+                    AppPage.BATTLE_PASS -> BattlePassScreen(
+                        token = state.token,
+                        onBack = { page = AppPage.DRIVE_UP }
+                    )
                     AppPage.HISTORY -> PlaceholderScreen("История заказов", onOpenMenu = { scope.launch { drawerState.open() } })
                     AppPage.INTERCITY -> PlaceholderScreen("Межгород", onOpenMenu = { scope.launch { drawerState.open() } })
                     AppPage.SECURITY -> PlaceholderScreen("Безопасность", onOpenMenu = { scope.launch { drawerState.open() } })

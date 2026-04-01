@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -97,7 +98,7 @@ private fun parseEvaluateJavascriptLong(raw: String?): Long {
 /** Как страница «Игры» на driveeup.ru: одна карточка-превью, без описания под ней. */
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
-fun GamesScreen() {
+fun GamesScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var showGame by remember { mutableStateOf(false) }
     var cooldownMs by remember { mutableStateOf(cooldownRemainingMs(context)) }
@@ -119,10 +120,27 @@ fun GamesScreen() {
             .fillMaxSize()
             .padding(20.dp)
     ) {
+        Surface(
+            modifier = Modifier
+                .size(40.dp)
+                .align(Alignment.TopStart),
+            shape = RoundedCornerShape(999.dp),
+            color = Color(0xFFF0F0F0),
+            onClick = onBack
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Назад",
+                tint = Color(0xFF6C6C6C),
+                modifier = Modifier.padding(10.dp)
+            )
+        }
         CrossRoadGameCard(
             cooldownMs = cooldownMs,
             onPlay = { if (cooldownMs <= 0) showGame = true },
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 52.dp)
         )
     }
 
@@ -190,7 +208,16 @@ fun GamesScreen() {
                                                             "var ls=0;" +
                                                             "try{var x=localStorage.getItem(k);" +
                                                             "ls=x?parseInt(x,10):0;}catch(e){}" +
-                                                            "if(tk){try{localStorage.setItem('driveeup_token',tk);}catch(e){}}" +
+                                                            "if(tk){" +
+                                                            "try{localStorage.setItem('driveeup_token',tk);}catch(e){}" +
+                                                            "try{sessionStorage.setItem('driveeup_token',tk);}catch(e){}" +
+                                                            "try{" +
+                                                            "if(!sessionStorage.getItem('driveeup_token_synced')){" +
+                                                            "sessionStorage.setItem('driveeup_token_synced','1');" +
+                                                            "setTimeout(function(){location.reload();},0);" +
+                                                            "}" +
+                                                            "}catch(e){}" +
+                                                            "}" +
                                                             "var u=Math.max(p,ls);" +
                                                             "var now=Date.now();" +
                                                             "if(u>now){localStorage.setItem(k,String(u));}" +
