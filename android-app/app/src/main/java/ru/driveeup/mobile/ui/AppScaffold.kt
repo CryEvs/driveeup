@@ -52,10 +52,11 @@ import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
 import ru.driveeup.mobile.ui.home.BattlePassScreen
+import ru.driveeup.mobile.ui.home.GamesScreen
 import ru.driveeup.mobile.ui.home.HomeScreen
 import ru.driveeup.mobile.ui.home.ProfileScreen
 
-enum class AppPage { HOME, PROFILE, BATTLE_PASS }
+enum class AppPage { HOME, PROFILE, GAMES, BATTLE_PASS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,6 +142,15 @@ private fun AppContent(
                             colors = navColors
                         )
                         NavigationDrawerItem(
+                            label = { Text("Игры") },
+                            selected = page == AppPage.GAMES,
+                            onClick = {
+                                page = AppPage.GAMES
+                                scope.launch { drawerState.close() }
+                            },
+                            colors = navColors
+                        )
+                        NavigationDrawerItem(
                             label = { Text("Батл пас") },
                             selected = page == AppPage.BATTLE_PASS,
                             onClick = {
@@ -204,6 +214,7 @@ private fun AppContent(
                 when (page) {
                     AppPage.HOME -> HomeScreen()
                     AppPage.PROFILE -> ProfileScreen(user = state.user!!, onChangeAvatar = onChangeAvatar)
+                    AppPage.GAMES -> GamesScreen()
                     AppPage.BATTLE_PASS -> BattlePassScreen()
                 }
             }

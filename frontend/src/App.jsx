@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { CrossRoadPlayPage } from './pages/CrossRoadPlayPage'
+import { GamesPage } from './pages/GamesPage'
 import './App.css'
 
 const API_BASE = '/api'
@@ -100,7 +102,9 @@ function Sidebar({ user, theme, setTheme, onLogout }) {
       <div>
         <h2>DriveeUP</h2>
         <nav>
+          <Link to="/">Главная</Link>
           <Link to="/profile">Профиль</Link>
+          <Link to="/games">Игры</Link>
           <Link to="/battle-pass">Батл пас</Link>
         </nav>
         <div className="coins">DriveeCoin: {user?.driveeCoin ?? 0}</div>
@@ -202,6 +206,7 @@ function Dashboard({ auth }) {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/profile" element={<ProfilePage token={auth.token} user={auth.user} setUser={auth.setUser} />} />
+          <Route path="/games" element={<GamesPage />} />
           <Route path="/battle-pass" element={<BattlePassPage />} />
         </Routes>
       </section>
@@ -216,6 +221,8 @@ function RootApp() {
       <Routes>
         <Route path="/login" element={<AuthPage mode="login" onAuth={(token, user) => { auth.saveToken(token); auth.setUser(user) }} />} />
         <Route path="/register" element={<AuthPage mode="register" onAuth={(token, user) => { auth.saveToken(token); auth.setUser(user) }} />} />
+        {/* Публичная страница игры: WebView в Android и прямые ссылки без сессии */}
+        <Route path="/games/cross-road" element={<CrossRoadPlayPage />} />
         <Route path="*" element={<Dashboard auth={auth} />} />
       </Routes>
     </BrowserRouter>

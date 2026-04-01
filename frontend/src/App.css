@@ -132,3 +132,300 @@ button {
 }
 
 .upload-label input { display: block; margin-top: 8px; }
+
+body.theme-dark .sidebar a {
+  color: #e7f8d7;
+  background: #1e321b;
+}
+
+.games-page__head {
+  margin-bottom: 20px;
+}
+
+.games-page__lead {
+  margin: 8px 0 0;
+  opacity: 0.88;
+  line-height: 1.45;
+}
+
+.game-card {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) 1fr;
+  gap: 24px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .game-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+.game-card__preview {
+  position: relative;
+  min-height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(165deg, #1a2e18 0%, #0d160c 50%, #1e321b 100%);
+  border: 1px solid #4f7a3f;
+}
+
+.game-card__preview--crossroad .game-card__preview-road {
+  position: absolute;
+  inset: 18% 8%;
+  background: repeating-linear-gradient(
+    90deg,
+    #3a3a3a 0px,
+    #3a3a3a 12px,
+    #6b7a5c 12px,
+    #6b7a5c 24px,
+    #3a3a3a 24px,
+    #3a3a3a 36px
+  );
+  border-radius: 8px;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.45);
+}
+
+.game-card__preview--crossroad .game-card__preview-walk {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  bottom: 18%;
+  width: 14%;
+  margin-left: -7%;
+  background: linear-gradient(180deg, #7a8b68, #5c6b4e);
+  border-radius: 4px;
+  opacity: 0.95;
+}
+
+.game-card__preview-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(150, 234, 40, 0.25);
+  color: #c8f070;
+  border: 1px solid rgba(150, 234, 40, 0.4);
+}
+
+.game-card__title {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+}
+
+.game-card__desc {
+  margin: 0 0 16px;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.game-card__cooldown {
+  margin: 0 0 12px;
+  color: #8a9a7a;
+}
+
+body.theme-dark .game-card__cooldown {
+  color: #a8c090;
+}
+
+.game-card__play {
+  max-width: 220px;
+  padding: 12px 20px;
+  border-radius: 12px;
+}
+
+.game-card__play:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.game-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.game-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 18, 8, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.game-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(960px, 100%);
+  max-height: min(92vh, 880px);
+  display: flex;
+  flex-direction: column;
+  background: #0f1a0e;
+  border: 1px solid #3c652d;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.game-modal__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #162514, #1e321b);
+  border-bottom: 1px solid #3c652d;
+}
+
+.game-modal__bar h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #e7f8d7;
+}
+
+.game-modal__close {
+  width: auto;
+  min-width: 40px;
+  padding: 6px 12px;
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: #c8e6b0;
+  cursor: pointer;
+}
+
+.game-modal__close:hover {
+  color: #fff;
+}
+
+.game-modal__canvas {
+  flex: 1;
+  min-height: min(72vh, 560px);
+  position: relative;
+}
+
+.crossroad-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: min(72vh, 560px);
+}
+
+.crossroad-wrap--embed {
+  min-height: calc(100vh - 52px);
+}
+
+.crossroad-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+}
+
+.crossroad-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.crossroad-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 12px 14px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+.crossroad-hud__score {
+  font-weight: 700;
+  font-size: 15px;
+  color: #f4ffe8;
+}
+
+.crossroad-hud__hint {
+  font-size: 12px;
+  color: rgba(230, 245, 210, 0.85);
+  text-align: center;
+  max-width: 420px;
+  line-height: 1.35;
+}
+
+.crossroad-hud__end {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ff6b6b;
+  letter-spacing: 0.02em;
+}
+
+.crossroad-play-page {
+  display: flex;
+  flex-direction: column;
+  min-height: min(85vh, 900px);
+}
+
+.crossroad-play-page__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, #162514, #1a2818);
+  border-bottom: 1px solid #3c652d;
+}
+
+.crossroad-play-page__back {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.crossroad-play-page__back:hover {
+  text-decoration: underline;
+}
+
+.crossroad-play-page__back--muted {
+  color: inherit;
+  font-weight: 600;
+  opacity: 0.85;
+  cursor: default;
+  text-decoration: none;
+}
+
+.crossroad-play-page__title {
+  font-weight: 800;
+  flex: 1;
+}
+
+.crossroad-play-page__cd {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.crossroad-play-page__stage {
+  flex: 1;
+  position: relative;
+  min-height: 400px;
+}
+
+.crossroad-play-page__wait {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+  padding: 24px;
+  text-align: center;
+  font-size: 1.1rem;
+}
