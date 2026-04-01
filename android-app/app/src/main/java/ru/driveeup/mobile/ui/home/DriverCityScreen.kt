@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -254,7 +255,11 @@ fun DriverCityScreen(
                     val p = o.passenger
                     Row {
                         Column(Modifier.weight(0.25f)) {
-                            Surface(CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(48.dp)) {}
+                            Surface(
+                                modifier = Modifier.size(48.dp),
+                                shape = CircleShape,
+                                color = Color(0xFFEAEAEA)
+                            ) {}
                             Text(p?.firstName ?: "—", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text("★ ${p?.ratingAvg ?: 5.0} (${p?.ridesCount ?: 0})", fontSize = 11.sp, color = Color(0xFFFFC107))
                         }
@@ -486,11 +491,12 @@ private fun DriverNewOrderMapCard(ride: RideOrder) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DriverAvailabilityToggle(free: Boolean, onToggle: () -> Unit) {
     val border = if (free) SaladOutline else Color(0xFFE53935)
     Surface(
-        modifier = Modifier.clickable(onClick = onToggle),
+        onClick = onToggle,
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(2.dp, border),
         color = Color.White
@@ -551,7 +557,11 @@ private fun DriverFeedTab(
                     .padding(12.dp)
             ) {
                 Column(Modifier.weight(0.25f)) {
-                    Surface(CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(44.dp)) {}
+                    Surface(
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = Color(0xFFEAEAEA)
+                    ) {}
                     Text(item.passenger?.firstName ?: "—", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("★ ${item.passenger?.ratingAvg ?: 5.0} (${item.passenger?.ridesCount ?: 0})", fontSize = 11.sp, color = Color(0xFFFFC107))
                     Text("Только что", fontSize = 11.sp, color = Color(0xFF8A8A8A))
