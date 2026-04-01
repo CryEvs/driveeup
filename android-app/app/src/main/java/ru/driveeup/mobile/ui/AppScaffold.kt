@@ -14,18 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CurrencyCoin
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
@@ -160,14 +153,14 @@ private fun AppContent(
                             Text(">", color = Color.Gray)
                         }
                         Divider(color = Color(0xFFD7D7D7))
-                        MenuItem(page, AppPage.CITY, "Город", Icons.Default.LocationCity) { page = it; scope.launch { drawerState.close() } }
-                        MenuItem(page, AppPage.HISTORY, "История заказов", Icons.Default.History) { page = it; scope.launch { drawerState.close() } }
-                        MenuItem(page, AppPage.INTERCITY, "Межгород", Icons.Default.Language) { page = it; scope.launch { drawerState.close() } }
-                        MenuItem(page, AppPage.SECURITY, "Безопасность", Icons.Default.Shield) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.CITY, "Город", Icons.Default.Place) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.HISTORY, "История заказов", Icons.Default.Info) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.INTERCITY, "Межгород", Icons.Default.Place) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.SECURITY, "Безопасность", Icons.Default.Info) { page = it; scope.launch { drawerState.close() } }
                         MenuItem(page, AppPage.SETTINGS, "Настройки", Icons.Default.Settings) { page = it; scope.launch { drawerState.close() } }
                         MenuItem(page, AppPage.HELP, "Помощь", Icons.Default.Info) { page = it; scope.launch { drawerState.close() } }
-                        MenuItem(page, AppPage.SUPPORT, "Служба поддержки", Icons.Default.SupportAgent) { page = it; scope.launch { drawerState.close() } }
-                        MenuItem(page, AppPage.DRIVE_UP, "DriveUP", Icons.Default.CurrencyCoin) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.SUPPORT, "Служба поддержки", Icons.Default.Info) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.DRIVE_UP, "DriveUP", Icons.Default.Info) { page = it; scope.launch { drawerState.close() } }
                     }
                     Column {
                         Divider(color = Color(0xFFD7D7D7))
@@ -212,7 +205,7 @@ private fun AppContent(
                         onOpenBattlePass = { page = AppPage.BATTLE_PASS }
                     )
                     AppPage.GAMES -> GamesScreen()
-                    AppPage.BATTLE_PASS -> BattlePassScreen()
+                    AppPage.BATTLE_PASS -> BattlePassScreen(token = state.token)
                     AppPage.HISTORY -> PlaceholderScreen("История заказов", onOpenMenu = { scope.launch { drawerState.open() } })
                     AppPage.INTERCITY -> PlaceholderScreen("Межгород", onOpenMenu = { scope.launch { drawerState.open() } })
                     AppPage.SECURITY -> PlaceholderScreen("Безопасность", onOpenMenu = { scope.launch { drawerState.open() } })

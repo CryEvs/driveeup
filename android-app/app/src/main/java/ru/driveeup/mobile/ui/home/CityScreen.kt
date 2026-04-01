@@ -1,8 +1,6 @@
 package ru.driveeup.mobile.ui.home
 
-import android.annotation.SuppressLint
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +28,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,23 +37,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.net.URLEncoder
 import java.net.URL
 
 data class PlaceHit(val display: String, val lat: Double, val lon: Double)
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun CityScreen(
     driveCoin: Long,
     onOpenMenu: () -> Unit,
     onOpenDriveUp: () -> Unit
 ) {
+    val context = LocalContext.current
+    val appContext = context.applicationContext
+    Configuration.getInstance().load(appContext, appContext.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+
     var from by remember { mutableStateOf("") }
     var to by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
@@ -62,7 +72,8 @@ fun CityScreen(
     val results = remember { mutableStateListOf<PlaceHit>() }
     var fromPlace by remember { mutableStateOf<PlaceHit?>(null) }
     var toPlace by remember { mutableStateOf<PlaceHit?>(null) }
-    val webRef = remember { mutableStateOf<WebView?>(null) }
+    val mapRef = remember { mutableStateOf<MapView?>(null) }
+    val overlaysRef = remember { mutableStateListOf<org.osmdroid.views.overlay.Overlay>() }
 
     suspend fun searchPlaces(query: String) {
         if (query.isBlank()) {
@@ -105,17 +116,12 @@ fun CityScreen(
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = true
-                        webViewClient = WebViewClient()
-                        loadDataWithBaseURL(
-                            "https://driveeup.ru",
-                            cityMapHtml(),
-                            "text/html",
-                            "utf-8",
-                            null
-                        )
-                        webRef.value = this
+                    MapView(ctx).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        controller.setZoom(12.0)
+                        controller.setCenter(GeoPoint(55.751244, 37.618423))
+                        mapRef.value = this
                     }
                 }
             )
@@ -202,10 +208,7 @@ fun CityScreen(
                         val a = fromPlace
                         val b = toPlace
                         if (a != null && b != null) {
-                            webRef.value?.evaluateJavascript(
-                                "window.driveeupRoute(${a.lat},${a.lon},${b.lat},${b.lon});",
-                                null
-                            )
+                            drawRoute(mapRef.value, overlaysRef, a, b)
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -213,28 +216,55 @@ fun CityScreen(
             }
         }
     }
+    DisposableEffect(Unit) {
+        onDispose {
+            mapRef.value?.onDetach()
+            overlaysRef.clear()
+        }
+    }
 }
 
-private fun cityMapHtml(): String = """
-<!doctype html><html><head>
-<meta name='viewport' content='width=device-width,initial-scale=1'/>
-<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
-<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
-<style>html,body,#map{height:100%;margin:0;} </style>
-</head><body><div id='map'></div>
-<script>
-const map = L.map('map').setView([55.751244, 37.618423], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-let routeLine = null; let markerA = null; let markerB = null;
-window.driveeupRoute = async function(aLat,aLon,bLat,bLon){
-  if(markerA) map.removeLayer(markerA); if(markerB) map.removeLayer(markerB); if(routeLine) map.removeLayer(routeLine);
-  markerA = L.marker([aLat,aLon]).addTo(map);
-  markerB = L.marker([bLat,bLon]).addTo(map);
-  const url = `https://router.project-osrm.org/route/v1/driving/${aLon},${aLat};${bLon},${bLat}?overview=full&geometries=geojson`;
-  const res = await fetch(url); const data = await res.json();
-  const coords = (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) || [];
-  routeLine = L.polyline(coords.map(x=>[x[1],x[0]]), {color:'#5abf2a', weight:6}).addTo(map);
-  map.fitBounds(routeLine.getBounds(), {padding:[24,24]});
+private fun drawRoute(
+    map: MapView?,
+    overlaysRef: MutableList<org.osmdroid.views.overlay.Overlay>,
+    from: PlaceHit,
+    to: PlaceHit
+) {
+    if (map == null) return
+    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching {
+            val url = "https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson"
+            val text = URL(url).openStream().bufferedReader().use { it.readText() }
+            val json = JSONObject(text)
+            val coords = json.getJSONArray("routes")
+                .getJSONObject(0)
+                .getJSONObject("geometry")
+                .getJSONArray("coordinates")
+
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                overlaysRef.forEach { map.overlays.remove(it) }
+                overlaysRef.clear()
+
+                val markerA = Marker(map).apply { position = GeoPoint(from.lat, from.lon) }
+                val markerB = Marker(map).apply { position = GeoPoint(to.lat, to.lon) }
+                map.overlays.add(markerA)
+                map.overlays.add(markerB)
+                overlaysRef.add(markerA)
+                overlaysRef.add(markerB)
+
+                val polyline = Polyline().apply {
+                    outlinePaint.color = android.graphics.Color.parseColor("#5abf2a")
+                    outlinePaint.strokeWidth = 8f
+                    setPoints((0 until coords.length()).map { idx ->
+                        val c = coords.getJSONArray(idx)
+                        GeoPoint(c.getDouble(1), c.getDouble(0))
+                    })
+                }
+                map.overlays.add(polyline)
+                overlaysRef.add(polyline)
+                map.invalidate()
+                map.controller.animateTo(GeoPoint(from.lat, from.lon))
+            }
+        }
+    }
 }
-</script></body></html>
-""".trimIndent()

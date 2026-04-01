@@ -26,13 +26,11 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -116,6 +114,16 @@ fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit, onOpenMenu: () -
             withContext(Dispatchers.Main) { dataUrl?.let(onChangeAvatar) }
         }
     }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
+        if (bitmap == null) return@rememberLauncherForActivityResult
+        scope.launch(Dispatchers.IO) {
+            val resized = Bitmap.createScaledBitmap(bitmap, 320, 320, true)
+            val out = java.io.ByteArrayOutputStream()
+            resized.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            val dataUrl = "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+            withContext(Dispatchers.Main) { onChangeAvatar(dataUrl) }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -144,12 +152,16 @@ fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit, onOpenMenu: () -
                     .border(3.dp, Color(0xFF96EA28), CircleShape)
             )
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Сделать снимок", color = Color(0xFF2F6CC0))
-                Text("Выбрать из галереи", color = Color(0xFF2F6CC0))
-                OutlinedButton(
-                    onClick = { pickImage.launch("image/*") },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                ) { Text("Обновить аватар") }
+                Text(
+                    "Сделать снимок",
+                    color = Color(0xFF2F6CC0),
+                    modifier = Modifier.clickable { takePhoto.launch(null) }
+                )
+                Text(
+                    "Выбрать из галереи",
+                    color = Color(0xFF2F6CC0),
+                    modifier = Modifier.clickable { pickImage.launch("image/*") }
+                )
             }
         }
         Spacer(Modifier.height(4.dp))

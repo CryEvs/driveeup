@@ -36,7 +36,7 @@ fun AuthScreen(vm: AuthViewModel) {
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
