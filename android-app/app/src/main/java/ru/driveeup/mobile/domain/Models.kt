@@ -12,7 +12,11 @@ data class User(
     val driveCoin: Long,
     val totalDriveCoin: Long = 0,
     val premium: Boolean,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val ratingAvg: Double = 5.0,
+    val ridesCount: Long = 0,
+    val vehicleModel: String? = null,
+    val vehiclePlate: String? = null
 )
 
 data class AuthResult(

@@ -70,6 +70,12 @@ class AuthRepository {
         parseUser(response)
     }
 
+    suspend fun setRole(token: String, role: UserRole): User = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("role", role.name)
+        val response = putJson("/auth/role", payload.toString(), token)
+        parseUser(response)
+    }
+
     private fun getJson(path: String, token: String?): JSONObject {
         return requestJson("GET", path, body = null, token = token)
     }
@@ -129,7 +135,11 @@ class AuthRepository {
             driveCoin = if (json.has("driveCoin")) json.optLong("driveCoin") else json.optLong("driveeCoin"),
             totalDriveCoin = json.optLong("totalDriveCoin"),
             premium = json.optBoolean("premium"),
-            avatarUrl = json.optString("avatarUrl").ifBlank { null }
+            avatarUrl = json.optString("avatarUrl").ifBlank { null },
+            ratingAvg = json.optDouble("ratingAvg", 5.0),
+            ridesCount = json.optLong("ridesCount"),
+            vehicleModel = json.optString("vehicleModel").ifBlank { null },
+            vehiclePlate = json.optString("vehiclePlate").ifBlank { null }
         )
     }
 }

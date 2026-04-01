@@ -16,10 +16,19 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'role' => ['required', Rule::in(['PASSENGER', 'DRIVER'])],
+            'firstName' => ['nullable', 'string', 'max:120'],
+            'lastName' => ['nullable', 'string', 'max:120'],
         ]);
 
+        $emailLocal = explode('@', $validated['email'])[0];
+        $first = $validated['firstName'] ?? null;
+        $last = $validated['lastName'] ?? null;
+        $displayName = trim(implode(' ', array_filter([$first, $last]))) ?: $emailLocal;
+
         $user = User::create([
-            'name' => explode('@', $validated['email'])[0],
+            'name' => $displayName,
+            'first_name' => $first,
+            'last_name' => $last,
             'email' => mb_strtolower(trim($validated['email'])),
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
@@ -85,6 +94,23 @@ class AuthController extends Controller
         return response()->json($this->transformUser($user));
     }
 
+    public function setRole(Request $request)
+    {
+        $user = $this->resolveUserFromToken($request);
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'role' => ['required', Rule::in(['PASSENGER', 'DRIVER'])],
+        ]);
+
+        $user->role = $validated['role'];
+        $user->save();
+
+        return response()->json($this->transformUser($user));
+    }
+
     private function resolveUserFromToken(Request $request): ?User
     {
         $header = $request->header('Authorization', '');
@@ -97,15 +123,30 @@ class AuthController extends Controller
 
     private function transformUser(User $user): array
     {
+        $first = $user->first_name;
+        $last = $user->last_name;
+        if (! $first && ! $last && $user->name) {
+            $parts = preg_split('/\s+/', $user->name, 2);
+            $first = $first ?: ($parts[0] ?? '');
+            $last = $last ?: ($parts[1] ?? '');
+        }
+
         return [
             'id' => $user->id,
             'email' => $user->email,
+            'firstName' => $first ?? '',
+            'lastName' => $last ?? '',
+            'city' => $user->city ?? '',
             'role' => $user->role,
             'isAdmin' => (bool) $user->is_admin,
             'driveCoin' => (int) $user->drivee_coin,
             'totalDriveCoin' => (int) $user->total_drive_coin,
             'premium' => (bool) $user->premium,
             'avatarUrl' => $user->avatar_url,
+            'ratingAvg' => isset($user->rating_avg) ? round((float) $user->rating_avg, 2) : 5.0,
+            'ridesCount' => isset($user->rides_count) ? (int) $user->rides_count : 0,
+            'vehicleModel' => $user->vehicle_model,
+            'vehiclePlate' => $user->vehicle_plate,
         ];
     }
 }

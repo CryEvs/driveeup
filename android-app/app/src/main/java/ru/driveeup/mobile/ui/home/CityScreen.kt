@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
@@ -35,8 +37,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,27 +49,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import java.net.URLEncoder
+import ru.driveeup.mobile.data.RideRepository
+import ru.driveeup.mobile.domain.RideOrder
+import ru.driveeup.mobile.domain.User
+import ru.driveeup.mobile.domain.UserRole
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import java.net.URL
+
+private val RouteLineBlue = 0xFF29B6F6.toInt()
+private val MarkerPickUp = 0xFF29B6F6.toInt()
+private val MarkerDropOff = 0xFF5CB018.toInt()
 
 data class PlaceHit(
     val display: String,
@@ -79,12 +88,17 @@ data class PlaceHit(
 @Composable
 fun CityScreen(
     driveCoin: Long,
+    token: String,
+    user: User,
     onOpenMenu: () -> Unit,
     onOpenDriveUp: () -> Unit
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
     Configuration.getInstance().load(appContext, appContext.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+
+    val rideRepo = remember { RideRepository() }
+    val uiScope = rememberCoroutineScope()
 
     var from by remember { mutableStateOf("") }
     var to by remember { mutableStateOf("") }
@@ -105,19 +119,26 @@ fun CityScreen(
     val mapRef = remember { mutableStateOf<MapView?>(null) }
     val overlaysRef = remember { mutableStateListOf<org.osmdroid.views.overlay.Overlay>() }
     val locationOverlayRef = remember { mutableStateOf<MyLocationNewOverlay?>(null) }
-    val uiScope = rememberCoroutineScope()
+
+    var activeRide by remember { mutableStateOf<RideOrder?>(null) }
+    var rateStars by remember { mutableStateOf(0) }
+    var orderingBusy by remember { mutableStateOf(false) }
 
     suspend fun reverseGeocode(lat: Double, lon: Double): String {
         return withContext(Dispatchers.IO) {
             runCatching {
-                val url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon"
+                val url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&accept-language=ru"
                 val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "DriveUP-Android/1.0")
-                    connectTimeout = 7000
-                    readTimeout = 7000
+                    setRequestProperty("User-Agent", "DriveUP-Android/1.0 (contact: support@driveeup.ru)")
+                    setRequestProperty("Accept-Language", "ru,en")
+                    connectTimeout = 10000
+                    readTimeout = 10000
                 }
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (code !in 200..299) return@runCatching ""
                 JSONObject(text).optString("display_name")
             }.getOrDefault("")
         }
@@ -154,14 +175,19 @@ fun CityScreen(
         }
         val items = withContext(Dispatchers.IO) {
             runCatching {
-                val url = "https://nominatim.openstreetmap.org/search?format=json&q=${URLEncoder.encode(query, "UTF-8")}&limit=8&addressdetails=1"
+                val url =
+                    "https://nominatim.openstreetmap.org/search?format=json&q=${URLEncoder.encode(query, "UTF-8")}&limit=8&addressdetails=1&accept-language=ru"
                 val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "DriveUP-Android/1.0")
-                    connectTimeout = 7000
-                    readTimeout = 7000
+                    setRequestProperty("User-Agent", "DriveUP-Android/1.0 (contact: support@driveeup.ru)")
+                    setRequestProperty("Accept-Language", "ru,en")
+                    connectTimeout = 10000
+                    readTimeout = 10000
                 }
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (code !in 200..299) return@runCatching emptyList()
                 val arr = JSONArray(text)
                 val referencePoint = userGeoPoint ?: fromPlace?.let { GeoPoint(it.lat, it.lon) }
                 val list = buildList {
@@ -208,8 +234,7 @@ fun CityScreen(
             )
         } else {
             if (from.isBlank()) {
-                // lastKnown может быть пустым сразу после старта, поэтому делаем несколько попыток.
-                repeat(6) {
+                repeat(8) {
                     val p = getLastKnownGeoPoint(context)
                     if (p != null) {
                         userGeoPoint = p
@@ -218,161 +243,298 @@ fun CityScreen(
                         fromPlace = PlaceHit(from, p.latitude, p.longitude, 0.0)
                         return@LaunchedEffect
                     }
-                    delay(800)
+                    delay(600)
                 }
             }
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Color.White)) {
-        Box(modifier = Modifier.fillMaxWidth().weight(3f)) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    MapView(ctx).apply {
-                        setTileSource(TileSourceFactory.MAPNIK)
-                        setMultiTouchControls(true)
-                        controller.setZoom(12.0)
-                        controller.setCenter(GeoPoint(55.751244, 37.618423))
-                        mapRef.value = this
-                        if (locationGranted) {
-                            enableUserLocation(this, locationOverlayRef)
-                        } else {
-                            centerByLastKnownLocation(context, this)
+    LaunchedEffect(fromPlace, toPlace) {
+        val a = fromPlace
+        val b = toPlace
+        if (a != null && b != null) {
+            drawRouteAb(
+                context,
+                mapRef.value,
+                overlaysRef,
+                a,
+                b,
+                RouteLineBlue,
+                MarkerPickUp,
+                MarkerDropOff
+            )
+        }
+    }
+
+    LaunchedEffect(token, user.role) {
+        if (token.isBlank() || user.role != UserRole.PASSENGER) return@LaunchedEffect
+        while (true) {
+            delay(3000)
+            runCatching {
+                activeRide = rideRepo.passengerActive(token)
+            }
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.White)) {
+        Column(Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxWidth().weight(3f)) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { ctx ->
+                        MapView(ctx).apply {
+                            setTileSource(TileSourceFactory.MAPNIK)
+                            setMultiTouchControls(true)
+                            controller.setZoom(12.0)
+                            controller.setCenter(GeoPoint(55.751244, 37.618423))
+                            mapRef.value = this
+                            if (locationGranted) {
+                                enableUserLocation(this, locationOverlayRef)
+                            } else {
+                                centerByLastKnownLocation(context, this)
+                            }
                         }
                     }
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(42.dp).clickable(onClick = onOpenMenu),
+                        shape = CircleShape,
+                        color = Color.White
+                    ) {
+                        Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.White,
+                        modifier = Modifier.clickable(onClick = onOpenDriveUp)
+                    ) {
+                        Text(
+                            text = "$driveCoin DriveCoin",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+
+                val ride = activeRide
+                if (ride != null && ride.status == "accepted") {
+                    PassengerEtaBanner(
+                        minutes = ride.driverEtaMinutes ?: 3,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
+                if (ride != null && ride.status == "at_pickup" && !ride.passengerExiting) {
+                    Column(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 56.dp)) {
+                        PassengerWaitingDriverBanner()
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                uiScope.launch {
+                                    runCatching {
+                                        rideRepo.passengerExit(token, ride.id)
+                                        activeRide = rideRepo.passengerActive(token)
+                                    }
+                                }
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF96EA28))
+                        ) { Text("Я выхожу") }
+                    }
+                }
+                if (ride != null && ride.status == "in_trip") {
+                    PassengerInTripBanner(Modifier.align(Alignment.TopCenter))
+                }
+
                 Surface(
-                    modifier = Modifier.size(42.dp).clickable(onClick = onOpenMenu),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                        .size(46.dp)
+                        .clickable {
+                            if (locationGranted) {
+                                val map = mapRef.value
+                                val overlay = locationOverlayRef.value
+                                if (map != null) {
+                                    if (overlay == null) {
+                                        enableUserLocation(map, locationOverlayRef)
+                                    } else {
+                                        val p = overlay.myLocation
+                                        if (p != null) {
+                                            map.controller.animateTo(p)
+                                            map.controller.setZoom(17.0)
+                                        } else {
+                                            overlay.enableFollowLocation()
+                                        }
+                                    }
+                                }
+                            } else {
+                                permissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        },
                     shape = CircleShape,
-                    color = Color.White
-                ) {
-                    Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
-                }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
                     color = Color.White,
-                    modifier = Modifier.clickable(onClick = onOpenDriveUp)
+                    border = BorderStroke(1.dp, Color(0xFFD9D9D9))
                 ) {
-                    Text(
-                        text = "$driveCoin DriveCoin",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    Icon(
+                        imageVector = Icons.Default.Place,
+                        contentDescription = "GPS",
+                        tint = Color(0xFF5A7BA5),
+                        modifier = Modifier.padding(11.dp)
                     )
                 }
             }
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(12.dp)
-                    .size(46.dp)
-                    .clickable {
-                        if (locationGranted) {
-                            val map = mapRef.value
-                            val overlay = locationOverlayRef.value
-                            if (map != null) {
-                                if (overlay == null) {
-                                    enableUserLocation(map, locationOverlayRef)
-                                } else {
-                                    val p = overlay.myLocation
-                                    if (p != null) {
-                                        map.controller.animateTo(p)
-                                        map.controller.setZoom(17.0)
-                                    } else {
-                                        overlay.enableFollowLocation()
-                                    }
-                                }
-                            }
-                        } else {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
-                        }
-                    },
-                shape = CircleShape,
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFFD9D9D9))
+
+            Card(
+                modifier = Modifier.fillMaxWidth().weight(2f),
+                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Place,
-                    contentDescription = "GPS",
-                    tint = Color(0xFF5A7BA5),
-                    modifier = Modifier.padding(11.dp)
-                )
+                Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clickable {
+                                activeField = "from"
+                                searchQuery = from
+                                fullSearchOpen = true
+                            },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFBFC8B8))
+                    ) {
+                        Text(
+                            text = if (from.isBlank()) "Откуда" else from,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                            color = if (from.isBlank()) Color(0xFF8A8A8A) else Color(0xFF1F1F1F),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clickable {
+                                activeField = "to"
+                                searchQuery = to
+                                fullSearchOpen = true
+                            },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFBFC8B8))
+                    ) {
+                        Text(
+                            text = if (to.isBlank()) "Куда" else to,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                            color = if (to.isBlank()) Color(0xFF8A8A8A) else Color(0xFF1F1F1F),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { v -> price = v.filter { it.isDigit() } },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Предложите цену") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    Button(
+                        onClick = {
+                            val a = fromPlace
+                            val b = toPlace
+                            val rub = price.toIntOrNull()
+                            if (a == null || b == null || rub == null || rub <= 0) return@Button
+                            if (token.isBlank()) return@Button
+                            orderingBusy = true
+                            uiScope.launch {
+                                runCatching {
+                                    activeRide = rideRepo.createRide(
+                                        token = token,
+                                        fromLat = a.lat,
+                                        fromLon = a.lon,
+                                        fromAddress = a.display,
+                                        toLat = b.lat,
+                                        toLon = b.lon,
+                                        toAddress = b.display,
+                                        priceRub = rub
+                                    )
+                                }
+                                orderingBusy = false
+                            }
+                        },
+                        enabled = !orderingBusy && activeRide == null,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Заказать") }
+                }
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth().weight(2f),
-            shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            activeField = "from"
-                            searchQuery = from
-                            fullSearchOpen = true
-                        },
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, Color(0xFFBFC8B8))
-                ) {
-                    Text(
-                        text = if (from.isBlank()) "Откуда" else from,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
-                        color = if (from.isBlank()) Color(0xFF8A8A8A) else Color(0xFF1F1F1F)
-                    )
+        val ride = activeRide
+        if (ride != null) {
+            when (ride.status) {
+                "searching" -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                        PassengerSearchingBottomSheet(ride.displayPriceRub)
+                    }
                 }
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            activeField = "to"
-                            searchQuery = to
-                            fullSearchOpen = true
-                        },
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, Color(0xFFBFC8B8))
-                ) {
-                    Text(
-                        text = if (to.isBlank()) "Куда" else to,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
-                        color = if (to.isBlank()) Color(0xFF8A8A8A) else Color(0xFF1F1F1F)
-                    )
-                }
-                OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Предложите цену") },
-                    singleLine = true
-                )
-                Button(
-                    onClick = {
-                        val a = fromPlace
-                        val b = toPlace
-                        if (a != null && b != null) {
-                            drawRoute(mapRef.value, overlaysRef, a, b)
+                "accepted", "at_pickup" -> {
+                    if (ride.driver != null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                            Column {
+                                PassengerDriverInfoSheet(
+                                    ride = ride,
+                                    onCancelTrip = {
+                                        uiScope.launch {
+                                            runCatching {
+                                                rideRepo.cancelPassenger(token, ride.id)
+                                                activeRide = null
+                                            }
+                                        }
+                                    }
+                                )
+                            }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Заказать") }
+                    }
+                }
+                "completed" -> {
+                    if ((ride.driverRating == null) && ride.driver != null) {
+                        PassengerRateFullScreen(
+                            driverName = ride.driver.firstName.ifBlank { ride.driver.email },
+                            selectedStars = rateStars,
+                            onStar = { rateStars = it },
+                            onDone = {
+                                if (rateStars > 0) {
+                                    uiScope.launch {
+                                        runCatching {
+                                            rideRepo.rate(token, ride.id, rateStars, "driver")
+                                            activeRide = null
+                                            rateStars = 0
+                                        }
+                                    }
+                                }
+                            },
+                            onCancel = {
+                                activeRide = null
+                                rateStars = 0
+                            }
+                        )
+                    }
+                }
             }
         }
+
         if (fullSearchOpen) {
             Surface(
                 modifier = Modifier
@@ -456,20 +618,6 @@ fun CityScreen(
     }
 }
 
-private fun getLastKnownGeoPoint(context: Context): GeoPoint? {
-    val hasLocationPerm =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    if (!hasLocationPerm) return null
-    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
-    val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-    for (provider in providers) {
-        val loc = runCatching { lm.getLastKnownLocation(provider) }.getOrNull() ?: continue
-        return GeoPoint(loc.latitude, loc.longitude)
-    }
-    return null
-}
-
 private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val r = 6371.0
     val dLat = Math.toRadians(lat2 - lat1)
@@ -512,50 +660,5 @@ private fun centerByLastKnownLocation(context: Context, map: MapView?) {
         map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
         map.controller.setZoom(15.5)
         return
-    }
-}
-
-private fun drawRoute(
-    map: MapView?,
-    overlaysRef: MutableList<org.osmdroid.views.overlay.Overlay>,
-    from: PlaceHit,
-    to: PlaceHit
-) {
-    if (map == null) return
-    CoroutineScope(Dispatchers.IO).launch {
-        runCatching {
-            val url = "https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson"
-            val text = URL(url).openStream().bufferedReader().use { it.readText() }
-            val json = JSONObject(text)
-            val coords = json.getJSONArray("routes")
-                .getJSONObject(0)
-                .getJSONObject("geometry")
-                .getJSONArray("coordinates")
-
-            withContext(Dispatchers.Main) {
-                overlaysRef.forEach { map.overlays.remove(it) }
-                overlaysRef.clear()
-
-                val markerA = Marker(map).apply { position = GeoPoint(from.lat, from.lon) }
-                val markerB = Marker(map).apply { position = GeoPoint(to.lat, to.lon) }
-                map.overlays.add(markerA)
-                map.overlays.add(markerB)
-                overlaysRef.add(markerA)
-                overlaysRef.add(markerB)
-
-                val polyline = Polyline().apply {
-                    outlinePaint.color = android.graphics.Color.parseColor("#5abf2a")
-                    outlinePaint.strokeWidth = 8f
-                    setPoints((0 until coords.length()).map { idx ->
-                        val c = coords.getJSONArray(idx)
-                        GeoPoint(c.getDouble(1), c.getDouble(0))
-                    })
-                }
-                map.overlays.add(polyline)
-                overlaysRef.add(polyline)
-                map.invalidate()
-                map.controller.animateTo(GeoPoint(from.lat, from.lon))
-            }
-        }
     }
 }

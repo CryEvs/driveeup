@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.data.AuthRepository
 import ru.driveeup.mobile.domain.User
+import ru.driveeup.mobile.domain.UserRole
 
 data class AuthUiState(
     val loading: Boolean = false,
@@ -15,7 +16,9 @@ data class AuthUiState(
     val user: User? = null,
     val token: String = "",
     val darkTheme: Boolean = false,
-    val registerMode: Boolean = false
+    val registerMode: Boolean = false,
+    /** Пока выполняется первичная проверка токена (/auth/me). */
+    val sessionChecking: Boolean = true
 )
 
 class AuthViewModel(
@@ -25,9 +28,30 @@ class AuthViewModel(
     val uiState: StateFlow<AuthUiState> = _uiState
 
     fun restoreSession(token: String, darkTheme: Boolean) {
-        _uiState.value = _uiState.value.copy(token = token, darkTheme = darkTheme)
-        if (token.isNotBlank()) {
-            refreshMe(token)
+        if (token.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                token = "",
+                user = null,
+                darkTheme = darkTheme,
+                sessionChecking = false,
+                error = null
+            )
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = _uiState.value.copy(token = token, darkTheme = darkTheme, sessionChecking = true, error = null)
+            runCatching { repo.me(token) }
+                .onSuccess { user ->
+                    _uiState.value = _uiState.value.copy(user = user, token = token, sessionChecking = false, error = null)
+                }
+                .onFailure {
+                    _uiState.value = _uiState.value.copy(
+                        token = "",
+                        user = null,
+                        sessionChecking = false,
+                        error = "Сессия истекла, войди снова"
+                    )
+                }
         }
     }
 
@@ -53,7 +77,8 @@ class AuthViewModel(
                         loading = false,
                         token = it.accessToken,
                         user = it.user,
-                        error = null
+                        error = null,
+                        sessionChecking = false
                     )
                 }
                 .onFailure { _uiState.value = _uiState.value.copy(loading = false, error = it.message ?: "Login failed") }
@@ -79,7 +104,8 @@ class AuthViewModel(
                         token = it.accessToken,
                         user = it.user,
                         error = null,
-                        registerMode = false
+                        registerMode = false,
+                        sessionChecking = false
                     )
                 }
                 .onFailure { _uiState.value = _uiState.value.copy(loading = false, error = it.message ?: "Register failed") }
@@ -95,7 +121,8 @@ class AuthViewModel(
                     _uiState.value = _uiState.value.copy(
                         token = "",
                         user = null,
-                        error = "Сессия истекла, войди снова"
+                        error = "Сессия истекла, войди снова",
+                        sessionChecking = false
                     )
                 }
         }
@@ -117,10 +144,19 @@ class AuthViewModel(
     }
 
     fun logout() {
-        _uiState.value = _uiState.value.copy(token = "", user = null, error = null, registerMode = false)
+        _uiState.value = _uiState.value.copy(token = "", user = null, error = null, registerMode = false, sessionChecking = false)
     }
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun setRole(role: UserRole) {
+        val token = _uiState.value.token
+        if (token.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { repo.setRole(token, role) }
+                .onSuccess { user -> _uiState.value = _uiState.value.copy(user = user, error = null) }
+        }
     }
 }

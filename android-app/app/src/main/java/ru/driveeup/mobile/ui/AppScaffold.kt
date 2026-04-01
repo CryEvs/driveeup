@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
@@ -54,7 +56,9 @@ import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
 import ru.driveeup.mobile.ui.home.BattlePassScreen
+import ru.driveeup.mobile.domain.UserRole
 import ru.driveeup.mobile.ui.home.CityScreen
+import ru.driveeup.mobile.ui.home.DriverCityScreen
 import ru.driveeup.mobile.ui.home.DriveUpScreen
 import ru.driveeup.mobile.ui.home.GamesScreen
 import ru.driveeup.mobile.ui.home.ProfileScreen
@@ -91,15 +95,27 @@ fun DriveeUpAppScaffold() {
                 .fillMaxSize()
                 .background(Color.White)
         ) {
-            if (state.token.isBlank() || state.user == null) {
-                AuthScreen(vm = vm)
-            } else {
-                AppContent(
-                    state = state,
-                    onToggleTheme = { vm.setTheme(it) },
-                    onLogout = { vm.logout() },
-                    onChangeAvatar = { vm.updateAvatar(it) }
-                )
+            when {
+                state.sessionChecking -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF96EA28))
+                    }
+                }
+                state.token.isBlank() || state.user == null -> {
+                    AuthScreen(vm = vm)
+                }
+                else -> {
+                    AppContent(
+                        vm = vm,
+                        state = state,
+                        onToggleTheme = { vm.setTheme(it) },
+                        onLogout = { vm.logout() },
+                        onChangeAvatar = { vm.updateAvatar(it) }
+                    )
+                }
             }
         }
     }
@@ -108,6 +124,7 @@ fun DriveeUpAppScaffold() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppContent(
+    vm: AuthViewModel,
     state: ru.driveeup.mobile.ui.auth.AuthUiState,
     onToggleTheme: (Boolean) -> Unit,
     onLogout: () -> Unit,
@@ -117,6 +134,15 @@ private fun AppContent(
     val scope = rememberCoroutineScope()
     var page by remember { mutableStateOf(AppPage.CITY) }
     val drawerBg = Color.White
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("driveeup_prefs", Context.MODE_PRIVATE) }
+    var driverUiMode by remember { mutableStateOf(prefs.getBoolean("driver_ui_mode", false)) }
+
+    LaunchedEffect(Unit) {
+        if (prefs.getBoolean("driver_ui_mode", false)) {
+            vm.setRole(UserRole.DRIVER)
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -166,14 +192,18 @@ private fun AppContent(
                         Divider(color = Color(0xFFD7D7D7))
                         Spacer(Modifier.height(12.dp))
                         Button(
-                            onClick = {},
+                            onClick = {
+                                driverUiMode = !driverUiMode
+                                prefs.edit().putBoolean("driver_ui_mode", driverUiMode).apply()
+                                vm.setRole(if (driverUiMode) UserRole.DRIVER else UserRole.PASSENGER)
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF96EA28),
                                 contentColor = Color.White
                             )
                         ) {
-                            Text("Стать водителем")
+                            Text(if (driverUiMode) "Стать пассажиром" else "Стать водителем")
                         }
                     }
                 }
@@ -188,11 +218,25 @@ private fun AppContent(
                 color = Color.White
             ) {
                 when (page) {
-                    AppPage.CITY -> CityScreen(
-                        driveCoin = state.user?.driveCoin ?: 0,
-                        onOpenMenu = { scope.launch { drawerState.open() } },
-                        onOpenDriveUp = { page = AppPage.DRIVE_UP }
-                    )
+                    AppPage.CITY -> {
+                        if (driverUiMode) {
+                            DriverCityScreen(
+                                driveCoin = state.user?.driveCoin ?: 0,
+                                token = state.token,
+                                user = state.user!!,
+                                onOpenMenu = { scope.launch { drawerState.open() } },
+                                onOpenDriveUp = { page = AppPage.DRIVE_UP }
+                            )
+                        } else {
+                            CityScreen(
+                                driveCoin = state.user?.driveCoin ?: 0,
+                                token = state.token,
+                                user = state.user!!,
+                                onOpenMenu = { scope.launch { drawerState.open() } },
+                                onOpenDriveUp = { page = AppPage.DRIVE_UP }
+                            )
+                        }
+                    }
                     AppPage.PROFILE -> ProfileScreen(
                         user = state.user!!,
                         onChangeAvatar = onChangeAvatar,
