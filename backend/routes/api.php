@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BattlePassController;
 use App\Http\Controllers\Api\GameRewardController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,3 +11,15 @@ Route::get('/auth/me', [AuthController::class, 'me']);
 Route::put('/auth/avatar', [AuthController::class, 'updateAvatar']);
 
 Route::post('/game/claim-drivee-coin', [GameRewardController::class, 'claimDriveeCoin']);
+Route::post('/game/claim-drive-coin', [GameRewardController::class, 'claimDriveeCoin']);
+
+Route::get('/battle-pass/current', [BattlePassController::class, 'current']);
+
+Route::get('/admin/battle-pass/seasons', [BattlePassController::class, 'adminSeasons']);
+Route::post('/admin/battle-pass/seasons', [BattlePassController::class, 'createSeason']);
+Route::put('/admin/battle-pass/seasons/{season}', [BattlePassController::class, 'updateSeason']);
+Route::delete('/admin/battle-pass/seasons/{season}', [BattlePassController::class, 'deleteSeason']);
+Route::post('/admin/battle-pass/seasons/{season}/finish', [BattlePassController::class, 'finishSeason']);
+Route::post('/admin/battle-pass/levels', [BattlePassController::class, 'createLevel']);
+Route::put('/admin/battle-pass/levels/{level}', [BattlePassController::class, 'updateLevel']);
+Route::delete('/admin/battle-pass/levels/{level}', [BattlePassController::class, 'deleteLevel']);

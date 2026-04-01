@@ -25,7 +25,7 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text("Главная")
-            Text("Добро пожаловать в DriveeUP. Выбери раздел в боковом меню.")
+            Text("Добро пожаловать в DriveUP. Выбери раздел в боковом меню.")
         }
     }
 }

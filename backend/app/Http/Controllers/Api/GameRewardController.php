@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BattlePassSeason;
 use App\Models\User;
+use App\Models\UserBattlePassProgress;
 use Illuminate\Http\Request;
 
 class GameRewardController extends Controller
@@ -27,11 +29,29 @@ class GameRewardController extends Controller
         $claimed = (int) round($lanes * 0.5);
 
         $user->drivee_coin = (int) $user->drivee_coin + $claimed;
+        $user->total_drive_coin = (int) $user->total_drive_coin + $claimed;
         $user->save();
+
+        $season = BattlePassSeason::query()
+            ->where('starts_at', '<=', now())
+            ->where('ends_at', '>=', now())
+            ->where('finished_early', false)
+            ->latest('starts_at')
+            ->first();
+
+        if ($season && $claimed > 0) {
+            $progress = UserBattlePassProgress::firstOrCreate(
+                ['user_id' => $user->id, 'season_id' => $season->id],
+                ['drive_coin_earned' => 0]
+            );
+            $progress->drive_coin_earned = (int) $progress->drive_coin_earned + $claimed;
+            $progress->save();
+        }
 
         return response()->json([
             'claimed' => $claimed,
-            'driveeCoin' => (int) $user->drivee_coin,
+            'driveCoin' => (int) $user->drivee_coin,
+            'totalDriveCoin' => (int) $user->total_drive_coin,
         ]);
     }
 

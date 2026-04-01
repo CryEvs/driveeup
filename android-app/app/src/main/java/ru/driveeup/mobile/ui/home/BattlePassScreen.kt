@@ -24,7 +24,7 @@ fun BattlePassScreen() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Батл пас")
+            Text("Батл-пасс")
             Text("Раздел в разработке.")
         }
     }

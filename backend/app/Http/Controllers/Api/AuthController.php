@@ -23,7 +23,9 @@ class AuthController extends Controller
             'email' => mb_strtolower(trim($validated['email'])),
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
+            'is_admin' => false,
             'drivee_coin' => 0,
+            'total_drive_coin' => 0,
             'premium' => false,
             'api_token' => bin2hex(random_bytes(32)),
         ]);
@@ -99,7 +101,9 @@ class AuthController extends Controller
             'id' => $user->id,
             'email' => $user->email,
             'role' => $user->role,
-            'driveeCoin' => (int) $user->drivee_coin,
+            'isAdmin' => (bool) $user->is_admin,
+            'driveCoin' => (int) $user->drivee_coin,
+            'totalDriveCoin' => (int) $user->total_drive_coin,
             'premium' => (bool) $user->premium,
             'avatarUrl' => $user->avatar_url,
         ];

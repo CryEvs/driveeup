@@ -125,8 +125,8 @@ private fun AppContent(
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("DriveeUP", style = MaterialTheme.typography.titleLarge)
-                        Text("DriveeCoin: ${state.user?.driveeCoin ?: 0}")
+                        Text("DriveUP", style = MaterialTheme.typography.titleLarge)
+                        Text("DriveCoin: ${state.user?.driveCoin ?: 0}")
                         val navColors = NavigationDrawerItemDefaults.colors(
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -193,7 +193,7 @@ private fun AppContent(
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
-                    title = { Text("DriveeUP") },
+                    title = { Text("DriveUP") },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "menu")

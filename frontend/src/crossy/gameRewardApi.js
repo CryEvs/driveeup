@@ -1,9 +1,9 @@
 const API = '/api'
 
-export async function claimDriveeCoin(lanesPassed, token) {
+export async function claimDriveCoin(lanesPassed, token) {
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(`${API}/game/claim-drivee-coin`, {
+  const res = await fetch(`${API}/game/claim-drive-coin`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ lanesPassed }),

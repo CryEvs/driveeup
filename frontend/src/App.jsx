@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CrossyGamePage } from './pages/CrossyGamePage'
 import { GamesPage } from './pages/GamesPage'
+import { BattlePassPage } from './pages/BattlePassPage.jsx'
+import { AdminBattlePassPage } from './pages/AdminBattlePassPage.jsx'
 import { AuthProvider, useAuth, API_BASE } from './authContext.jsx'
 import { LoadingDots } from './components/LoadingDots.jsx'
 import './App.css'
@@ -54,7 +56,7 @@ function AuthPage({ mode }) {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <h1>{mode === 'register' ? 'Регистрация' : 'Авторизация'} DriveeUP</h1>
+        <h1>{mode === 'register' ? 'Регистрация' : 'Авторизация'} DriveUP</h1>
         <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" disabled={submitting} />
         <input
           value={password}
@@ -93,19 +95,20 @@ function Sidebar({ user, userLoading, theme, setTheme, onLogout }) {
   return (
     <aside className="sidebar">
       <div>
-        <h2>DriveeUP</h2>
+        <h2>DriveUP</h2>
         <nav>
           <Link to="/">Главная</Link>
           <Link to="/profile">Профиль</Link>
           <Link to="/games">Игры</Link>
           <Link to="/battle-pass">Батл пас</Link>
+          {user?.isAdmin && <Link to="/admin/battle-pass">Админ панель</Link>}
         </nav>
         <div className="coins">
-          DriveeCoin:{' '}
+          DriveCoin:{' '}
           {userLoading ? (
             <LoadingDots className="loading-dots--inline" label="Загрузка баланса" />
           ) : (
-            <span>{user?.driveeCoin ?? 0}</span>
+            <span>{user?.driveCoin ?? user?.driveeCoin ?? 0}</span>
           )}
         </div>
       </div>
@@ -127,7 +130,7 @@ function MainPage() {
   return (
     <section className="content-card">
       <h1>Главная</h1>
-      <p>Добро пожаловать в DriveeUP. Выбери раздел в боковом меню.</p>
+      <p>Добро пожаловать в DriveUP. Выбери раздел в боковом меню.</p>
     </section>
   )
 }
@@ -137,26 +140,39 @@ function ProfilePage({ token, user, setUser }) {
 
   function onFile(file) {
     if (!file) return
+    const img = new Image()
     const reader = new FileReader()
-    reader.onload = async () => {
-      const avatarUrl = String(reader.result || '')
-      if (!avatarUrl) return
+    reader.onload = () => {
+      img.onload = async () => {
+        const side = Math.min(img.width, img.height)
+        const sx = Math.floor((img.width - side) / 2)
+        const sy = Math.floor((img.height - side) / 2)
+        const canvas = document.createElement('canvas')
+        canvas.width = 320
+        canvas.height = 320
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, 320, 320)
+        const avatarUrl = canvas.toDataURL('image/jpeg', 0.9)
+        if (!avatarUrl) return
 
-      const res = await fetch(`${API_BASE}/auth/avatar`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ avatarUrl }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Не удалось обновить аватар')
-        return
+        const res = await fetch(`${API_BASE}/auth/avatar`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ avatarUrl }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setError(data.error || 'Не удалось обновить аватар')
+          return
+        }
+        setError('')
+        setUser(data)
       }
-      setError('')
-      setUser(data)
+      img.src = String(reader.result || '')
     }
     reader.readAsDataURL(file)
   }
@@ -169,6 +185,8 @@ function ProfilePage({ token, user, setUser }) {
         <div>
           <p>Email: {user?.email}</p>
           <p>Роль: {user?.role}</p>
+          <p>DriveCoin: {user?.driveCoin ?? user?.driveeCoin ?? 0}</p>
+          <p>DriveCoin за все время: {user?.totalDriveCoin ?? 0}</p>
           <label className="upload-label">
             Изменить аватарку
             <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} />
@@ -176,15 +194,6 @@ function ProfilePage({ token, user, setUser }) {
         </div>
       </div>
       {error && <p className="error">{error}</p>}
-    </section>
-  )
-}
-
-function BattlePassPage() {
-  return (
-    <section className="content-card">
-      <h1>Батл пас</h1>
-      <p>Раздел в разработке.</p>
     </section>
   )
 }
@@ -213,7 +222,8 @@ function Dashboard({ auth }) {
           <Route path="/" element={<MainPage />} />
           <Route path="/profile" element={<ProfilePage token={auth.token} user={auth.user} setUser={auth.setUser} />} />
           <Route path="/games" element={<GamesPage />} />
-          <Route path="/battle-pass" element={<BattlePassPage />} />
+          <Route path="/battle-pass" element={<BattlePassPage token={auth.token} user={auth.user} />} />
+          <Route path="/admin/battle-pass" element={<AdminBattlePassPage token={auth.token} user={auth.user} />} />
         </Routes>
       </section>
     </main>
@@ -222,6 +232,7 @@ function Dashboard({ auth }) {
 
 function CrossyGamePageRoute() {
   const auth = useAuth()
+  if (!auth.token) return <Navigate to="/login" replace />
   return <CrossyGamePage token={auth.token} onClaimSuccess={() => auth.fetchMe()} />
 }
 

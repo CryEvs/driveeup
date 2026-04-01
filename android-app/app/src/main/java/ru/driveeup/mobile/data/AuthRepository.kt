@@ -103,7 +103,8 @@ class AuthRepository {
             email = json.optString("email"),
             role = runCatching { UserRole.valueOf(json.optString("role", UserRole.PASSENGER.name)) }
                 .getOrDefault(UserRole.PASSENGER),
-            driveeCoin = json.optLong("driveeCoin"),
+            driveCoin = if (json.has("driveCoin")) json.optLong("driveCoin") else json.optLong("driveeCoin"),
+            totalDriveCoin = json.optLong("totalDriveCoin"),
             premium = json.optBoolean("premium"),
             avatarUrl = json.optString("avatarUrl").ifBlank { null }
         )

@@ -4,10 +4,38 @@ const API_BASE = '/api'
 
 const AuthContext = createContext(null)
 
+/** WebView Android: токен в SharedPreferences, в localStorage пусто — читаем мост AndroidAuth (см. GamesScreen.kt). */
+function readStoredOrAndroidToken() {
+  if (typeof window === 'undefined') return ''
+  try {
+    const fromLs = localStorage.getItem('driveeup_token')
+    if (fromLs) return fromLs
+  } catch {
+    return ''
+  }
+  try {
+    const bridge = window.AndroidAuth
+    if (bridge && typeof bridge.getToken === 'function') {
+      const t = String(bridge.getToken() || '')
+      if (t) {
+        try {
+          localStorage.setItem('driveeup_token', t)
+        } catch {
+          /* ignore */
+        }
+        return t
+      }
+    }
+  } catch {
+    /* не WebView */
+  }
+  return ''
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('driveeup_token') || '')
+  const [token, setToken] = useState(() => readStoredOrAndroidToken())
   const [user, setUser] = useState(null)
-  const [userLoading, setUserLoading] = useState(() => !!localStorage.getItem('driveeup_token'))
+  const [userLoading, setUserLoading] = useState(() => !!readStoredOrAndroidToken())
   const [theme, setTheme] = useState(() => localStorage.getItem('driveeup_theme') || 'light')
 
   useEffect(() => {

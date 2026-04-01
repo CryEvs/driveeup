@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'drivee_coin', 'premium', 'api_token', 'avatar_url'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_admin', 'drivee_coin', 'total_drive_coin', 'premium', 'api_token', 'avatar_url'])]
 #[Hidden(['password', 'remember_token', 'api_token'])]
 class User extends Authenticatable
 {
@@ -28,7 +28,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'premium' => 'boolean',
+            'is_admin' => 'boolean',
             'drivee_coin' => 'integer',
+            'total_drive_coin' => 'integer',
         ];
     }
 }

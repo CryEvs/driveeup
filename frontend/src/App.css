@@ -150,6 +150,99 @@ button {
   padding: 20px;
 }
 
+.bp-progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e9efdf;
+  margin: 12px 0 16px;
+  overflow: hidden;
+}
+
+.bp-progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, #74c515, #96ea28);
+}
+
+.bp-levels {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.bp-level {
+  width: 78px;
+  height: 92px;
+  margin-top: 0;
+  border: 1px solid #b6cc95;
+  background: #fff;
+  color: #20310c;
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.bp-level--open {
+  border-color: #74c515;
+  box-shadow: 0 0 0 2px rgba(116, 197, 21, 0.2);
+}
+
+.bp-level img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.bp-admin {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px dashed #b6cc95;
+}
+
+.bp-admin-season {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #dbe8c6;
+}
+
+.bp-admin-level-actions > div {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bp-level-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.bp-level-modal__card {
+  width: min(420px, 100%);
+  background: #fff;
+  border: 1px solid #dbe8c6;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.bp-level-modal__card img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
 .profile-block {
   display: grid;
   grid-template-columns: 120px 1fr;

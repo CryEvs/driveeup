@@ -62,6 +62,10 @@ private const val LS_COOLDOWN_KEY = "driveeup_cross_road_cooldown_until"
 
 private const val PREFS = "driveeup_games"
 private const val KEY_COOLDOWN_UNTIL = "cross_road_cooldown_until"
+
+/** Как в AppScaffold: тот же JWT для WebView → authContext (readStoredOrAndroidToken). */
+private const val AUTH_PREFS = "driveeup_prefs"
+private const val KEY_AUTH_TOKEN = "token"
 private const val COOLDOWN_MS = 60_000L
 
 private fun cooldownRemainingMs(ctx: Context): Long {
@@ -125,11 +129,13 @@ fun GamesScreen() {
     if (showGame) {
         Dialog(
             onDismissRequest = { closeGameDialog() },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                scrimColor = Color(0x8E0A1208)
-            )
+            properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x8E0A1208))
+            ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.Transparent
@@ -203,6 +209,18 @@ fun GamesScreen() {
                                                 },
                                                 "AndroidCrossy"
                                             )
+                                            addJavascriptInterface(
+                                                object {
+                                                    @JavascriptInterface
+                                                    fun getToken(): String {
+                                                        return ctx.getSharedPreferences(
+                                                            AUTH_PREFS,
+                                                            Context.MODE_PRIVATE
+                                                        ).getString(KEY_AUTH_TOKEN, "").orEmpty()
+                                                    }
+                                                },
+                                                "AndroidAuth"
+                                            )
                                             loadUrl(CROSS_ROAD_URL)
                                         }
                                     }
@@ -228,6 +246,7 @@ fun GamesScreen() {
                         }
                     }
                 }
+            }
             }
         }
     }

@@ -16,7 +16,7 @@ export function CrossyGamePage({ token, onClaimSuccess }) {
   return (
     <div className="crossy-page">
       <header className="crossy-page__bar">
-        <span className="crossy-page__brand">DriveeUP</span>
+        <span className="crossy-page__brand">DriveUP</span>
         <span className="crossy-page__title">Перебеги дорогу</span>
       </header>
       <CrossyGameShell

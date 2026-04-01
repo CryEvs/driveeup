@@ -49,7 +49,7 @@ fun AuthScreen(vm: AuthViewModel) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = (if (state.registerMode) "Регистрация" else "Авторизация") + " DriveeUP",
+                        text = (if (state.registerMode) "Регистрация" else "Авторизация") + " DriveUP",
                         style = MaterialTheme.typography.titleLarge
                     )
                     OutlinedTextField(

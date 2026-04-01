@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCrossyStore } from './crossyStore'
-import { claimDriveeCoin } from './gameRewardApi'
+import { claimDriveCoin } from './gameRewardApi'
 import { startCrossRoadCooldown } from './crossyCooldown'
 
 export function CrossyUI({ token, embed, onClaimSuccess }) {
@@ -16,13 +16,13 @@ export function CrossyUI({ token, embed, onClaimSuccess }) {
 
   async function handleClaim() {
     if (!token) {
-      setClaimErr('Войди в аккаунт, чтобы получить DriveeCoin')
+      setClaimErr('Войди в аккаунт, чтобы получить DriveCoin')
       return
     }
     setClaiming(true)
     setClaimErr(null)
     try {
-      await claimDriveeCoin(lanesPassed, token)
+      await claimDriveCoin(lanesPassed, token)
       setClaimed(true)
       startCrossRoadCooldown()
       try {
@@ -56,7 +56,7 @@ export function CrossyUI({ token, embed, onClaimSuccess }) {
           <div className="crossy-ui__panel crossy-ui__panel--end">
             <h2>Игра окончена</h2>
             <p className="crossy-ui__dc">
-              Заработано DriveeCoin: <strong>{driveCoinPreview}</strong>
+              Заработано DriveCoin: <strong>{driveCoinPreview}</strong>
             </p>
             {!embed && (
               <p className="crossy-ui__sub">

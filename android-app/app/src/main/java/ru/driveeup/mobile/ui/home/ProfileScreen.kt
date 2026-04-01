@@ -1,6 +1,7 @@
 package ru.driveeup.mobile.ui.home
 
 import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,11 +57,18 @@ private fun decodeDataUriToBitmap(dataUri: String): android.graphics.Bitmap? {
 }
 
 private fun uriToDataUrl(context: android.content.Context, uri: Uri): String? {
-    val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
     val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
     if (bytes.isEmpty()) return null
-    val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-    return "data:$mime;base64,$b64"
+    val src = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+    val side = minOf(src.width, src.height)
+    val sx = (src.width - side) / 2
+    val sy = (src.height - side) / 2
+    val square = Bitmap.createBitmap(src, sx, sy, side, side)
+    val resized = Bitmap.createScaledBitmap(square, 320, 320, true)
+    val out = java.io.ByteArrayOutputStream()
+    resized.compress(Bitmap.CompressFormat.JPEG, 90, out)
+    val b64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+    return "data:image/jpeg;base64,$b64"
 }
 
 @Composable
@@ -163,6 +171,16 @@ fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit) {
                     )
                     Text(
                         text = "Роль: ${user.role}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "DriveCoin: ${user.driveCoin}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "DriveCoin за все время: ${user.totalDriveCoin}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
