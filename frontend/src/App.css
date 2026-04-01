@@ -156,6 +156,10 @@ body.theme-dark .sidebar a {
   margin-top: 8px;
 }
 
+.game-card--single {
+  max-width: 720px;
+}
+
 @media (max-width: 720px) {
   .game-card {
     grid-template-columns: 1fr;
@@ -244,188 +248,30 @@ body.theme-dark .game-card__cooldown {
   cursor: not-allowed;
 }
 
-.game-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.game-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 18, 8, 0.72);
-  backdrop-filter: blur(4px);
-}
-
-.game-modal__panel {
-  position: relative;
-  z-index: 1;
-  width: min(960px, 100%);
-  max-height: min(92vh, 880px);
-  display: flex;
-  flex-direction: column;
-  background: #0f1a0e;
-  border: 1px solid #3c652d;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
-}
-
-.game-modal__bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: linear-gradient(90deg, #162514, #1e321b);
-  border-bottom: 1px solid #3c652d;
-}
-
-.game-modal__bar h2 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #e7f8d7;
-}
-
-.game-modal__close {
+a.game-card__play--link {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
   width: auto;
-  min-width: 40px;
-  padding: 6px 12px;
-  margin: 0;
-  font-size: 1.5rem;
-  line-height: 1;
-  background: transparent;
-  border: none;
-  color: #c8e6b0;
-  cursor: pointer;
+  max-width: 220px;
+  padding: 12px 20px;
+  border-radius: 12px;
 }
 
-.game-modal__close:hover {
-  color: #fff;
-}
-
-.game-modal__canvas {
-  flex: 1;
-  min-height: min(72vh, 560px);
-  position: relative;
-}
-
-.crossroad-wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: min(72vh, 560px);
-}
-
-.crossroad-wrap--embed {
-  min-height: calc(100vh - 52px);
-}
-
-.crossroad-canvas {
-  width: 100%;
-  height: 100%;
-  min-height: inherit;
-}
-
-.crossroad-canvas canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.crossroad-hud {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  padding: 12px 14px;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-}
-
-.crossroad-hud__score {
-  font-weight: 700;
-  font-size: 15px;
-  color: #f4ffe8;
-}
-
-.crossroad-hud__hint {
-  font-size: 12px;
-  color: rgba(230, 245, 210, 0.85);
-  text-align: center;
-  max-width: 420px;
-  line-height: 1.35;
-}
-
-.crossroad-hud__end {
-  font-size: 22px;
+.game-card__play--brand,
+a.game-card__play--link.game-card__play--brand {
+  background: var(--brand);
+  border: 1px solid var(--brand-dark);
+  color: #1d2a08;
   font-weight: 800;
-  color: #ff6b6b;
-  letter-spacing: 0.02em;
 }
 
-.crossroad-play-page {
-  display: flex;
-  flex-direction: column;
-  min-height: min(85vh, 900px);
+a.game-card__play--link.game-card__play--brand:hover {
+  filter: brightness(1.05);
 }
 
-.crossroad-play-page__bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: linear-gradient(90deg, #162514, #1a2818);
-  border-bottom: 1px solid #3c652d;
-}
-
-.crossroad-play-page__back {
-  color: var(--brand);
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.crossroad-play-page__back:hover {
-  text-decoration: underline;
-}
-
-.crossroad-play-page__back--muted {
-  color: inherit;
-  font-weight: 600;
-  opacity: 0.85;
-  cursor: default;
-  text-decoration: none;
-}
-
-.crossroad-play-page__title {
-  font-weight: 800;
-  flex: 1;
-}
-
-.crossroad-play-page__cd {
-  font-size: 13px;
-  opacity: 0.9;
-}
-
-.crossroad-play-page__stage {
-  flex: 1;
-  position: relative;
-  min-height: 400px;
-}
-
-.crossroad-play-page__wait {
-  display: grid;
-  place-items: center;
-  min-height: 50vh;
-  padding: 24px;
-  text-align: center;
-  font-size: 1.1rem;
+body.theme-dark .game-card__play--brand,
+body.theme-dark a.game-card__play--link.game-card__play--brand {
+  color: #1d2a08;
 }

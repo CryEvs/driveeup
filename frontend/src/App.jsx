@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { CrossRoadPlayPage } from './pages/CrossRoadPlayPage'
+import { CrossyGamePage } from './pages/CrossyGamePage'
 import { GamesPage } from './pages/GamesPage'
 import './App.css'
 
 const API_BASE = '/api'
 
-function useAuth() {
+export function useAuth() {
   const [token, setToken] = useState(localStorage.getItem('driveeup_token') || '')
   const [user, setUser] = useState(null)
   const [theme, setTheme] = useState(localStorage.getItem('driveeup_theme') || 'light')
@@ -214,6 +214,11 @@ function Dashboard({ auth }) {
   )
 }
 
+function CrossyGamePageRoute() {
+  const auth = useAuth()
+  return <CrossyGamePage token={auth.token} onClaimSuccess={() => auth.fetchMe()} />
+}
+
 function RootApp() {
   const auth = useAuth()
   return (
@@ -221,8 +226,7 @@ function RootApp() {
       <Routes>
         <Route path="/login" element={<AuthPage mode="login" onAuth={(token, user) => { auth.saveToken(token); auth.setUser(user) }} />} />
         <Route path="/register" element={<AuthPage mode="register" onAuth={(token, user) => { auth.saveToken(token); auth.setUser(user) }} />} />
-        {/* Публичная страница игры: WebView в Android и прямые ссылки без сессии */}
-        <Route path="/games/cross-road" element={<CrossRoadPlayPage />} />
+        <Route path="/games/cross-road" element={<CrossyGamePageRoute />} />
         <Route path="*" element={<Dashboard auth={auth} />} />
       </Routes>
     </BrowserRouter>
