@@ -10,7 +10,6 @@ const GROUND_W = 52
 const TAXI_URL = '/models/cartoon_taxi_low_poli.glb'
 /** Модель GLB смотрит «задом» относительно ожидаемого направления движения */
 const TAXI_YAW_FIX = Math.PI
-
 export class GameEngine {
   constructor(container, store) {
     this.container = container
@@ -34,8 +33,8 @@ export class GameEngine {
 
     const w = container.clientWidth || 800
     const h = container.clientHeight || 600
-    this.camera = new THREE.PerspectiveCamera(26, w / h, 0.1, 320)
-    this.camera.position.set(0, 7.2, -13)
+    this.camera = new THREE.PerspectiveCamera(36, w / h, 0.1, 320)
+    this.camera.position.set(0, 7.2, -10.8)
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setSize(w, h)
@@ -276,10 +275,12 @@ export class GameEngine {
   syncPlayerMesh() {
     const z = worldZForRow(this.playerRow)
     this.player.position.set(this.playerX, 0, z)
-    const targetZ = z + 8
-    const camZ = z - 12.5
-    this.camera.position.lerp(new THREE.Vector3(this.playerX * 0.2, 7.0, camZ), 0.14)
-    this.camera.lookAt(this.playerX * 0.12, 0.85, targetZ)
+    const px = this.playerX
+    /** Камера строго сзади по X, чуть ближе к герою по Z, взгляд вперёд по полосе */
+    const camBehind = 10.8
+    const lookAheadZ = z + 6
+    this.camera.position.lerp(new THREE.Vector3(px, 7.0, z - camBehind), 0.14)
+    this.camera.lookAt(px, 0.85, lookAheadZ)
   }
 
   jump() {

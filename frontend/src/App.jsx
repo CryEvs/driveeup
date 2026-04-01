@@ -2,47 +2,18 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CrossyGamePage } from './pages/CrossyGamePage'
 import { GamesPage } from './pages/GamesPage'
+import { AuthProvider, useAuth, API_BASE } from './authContext.jsx'
+import { LoadingDots } from './components/LoadingDots.jsx'
 import './App.css'
 
-const API_BASE = '/api'
-
-export function useAuth() {
-  const [token, setToken] = useState(localStorage.getItem('driveeup_token') || '')
-  const [user, setUser] = useState(null)
-  const [theme, setTheme] = useState(localStorage.getItem('driveeup_theme') || 'light')
-
-  useEffect(() => {
-    document.body.className = theme === 'dark' ? 'theme-dark' : 'theme-light'
-    localStorage.setItem('driveeup_theme', theme)
-  }, [theme])
-
-  async function fetchMe(currentToken = token) {
-    if (!currentToken) return
-    const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${currentToken}` } })
-    if (res.ok) {
-      setUser(await res.json())
-    }
-  }
-
-  useEffect(() => {
-    fetchMe()
-  }, [token])
-
-  function saveToken(nextToken) {
-    setToken(nextToken)
-    if (nextToken) localStorage.setItem('driveeup_token', nextToken)
-    else localStorage.removeItem('driveeup_token')
-  }
-
-  return { token, user, setUser, saveToken, theme, setTheme, fetchMe }
-}
-
-function AuthPage({ mode, onAuth }) {
+function AuthPage({ mode }) {
   const navigate = useNavigate()
+  const auth = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('PASSENGER')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   async function submit() {
     setError('')
@@ -58,36 +29,58 @@ function AuthPage({ mode, onAuth }) {
     const endpoint = mode === 'register' ? '/auth/register' : '/auth/login'
     const payload = mode === 'register' ? { email, password, role } : { email, password }
 
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    const data = await res.json()
+    setSubmitting(true)
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
 
-    if (!res.ok || !data.accessToken) {
-      setError(data.error || 'Ошибка авторизации')
-      return
+      if (!res.ok || !data.accessToken) {
+        setError(data.error || 'Ошибка авторизации')
+        return
+      }
+
+      auth.saveToken(data.accessToken)
+      if (data.user) auth.setUser(data.user)
+      navigate('/')
+    } finally {
+      setSubmitting(false)
     }
-
-    onAuth(data.accessToken, data.user)
-    navigate('/')
   }
 
   return (
     <main className="auth-page">
       <section className="auth-card">
         <h1>{mode === 'register' ? 'Регистрация' : 'Авторизация'} DriveeUP</h1>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" type="password" />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" disabled={submitting} />
+        <input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Пароль"
+          type="password"
+          disabled={submitting}
+        />
         {mode === 'register' && (
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <select value={role} onChange={(e) => setRole(e.target.value)} disabled={submitting}>
             <option value="PASSENGER">Пассажир</option>
             <option value="DRIVER">Водитель</option>
           </select>
         )}
         {error && <p className="error">{error}</p>}
-        <button onClick={submit}>{mode === 'register' ? 'Создать аккаунт' : 'Войти'}</button>
+        <button type="button" onClick={submit} disabled={submitting} className={submitting ? 'auth-submit auth-submit--busy' : 'auth-submit'}>
+          {submitting ? (
+            <span className="auth-submit__inner">
+              <LoadingDots label="Отправка" />
+            </span>
+          ) : mode === 'register' ? (
+            'Создать аккаунт'
+          ) : (
+            'Войти'
+          )}
+        </button>
         <p className="switch-link">
           {mode === 'register' ? <Link to="/login">Уже есть аккаунт? Войти</Link> : <Link to="/register">Нет аккаунта? Регистрация</Link>}
         </p>
@@ -96,7 +89,7 @@ function AuthPage({ mode, onAuth }) {
   )
 }
 
-function Sidebar({ user, theme, setTheme, onLogout }) {
+function Sidebar({ user, userLoading, theme, setTheme, onLogout }) {
   return (
     <aside className="sidebar">
       <div>
@@ -107,7 +100,14 @@ function Sidebar({ user, theme, setTheme, onLogout }) {
           <Link to="/games">Игры</Link>
           <Link to="/battle-pass">Батл пас</Link>
         </nav>
-        <div className="coins">DriveeCoin: {user?.driveeCoin ?? 0}</div>
+        <div className="coins">
+          DriveeCoin:{' '}
+          {userLoading ? (
+            <LoadingDots className="loading-dots--inline" label="Загрузка баланса" />
+          ) : (
+            <span>{user?.driveeCoin ?? 0}</span>
+          )}
+        </div>
       </div>
       <div className="theme-zone">
         <label>Тема</label>
@@ -115,7 +115,9 @@ function Sidebar({ user, theme, setTheme, onLogout }) {
           <option value="light">Светлая</option>
           <option value="dark">Тёмная</option>
         </select>
-        <button className="logout" onClick={onLogout}>Выйти</button>
+        <button type="button" className="logout" onClick={onLogout}>
+          Выйти
+        </button>
       </div>
     </aside>
   )
@@ -144,9 +146,9 @@ function ProfilePage({ token, user, setUser }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ avatarUrl })
+        body: JSON.stringify({ avatarUrl }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -195,6 +197,7 @@ function Dashboard({ auth }) {
     <main className="app-layout">
       <Sidebar
         user={auth.user}
+        userLoading={auth.userLoading}
         theme={auth.theme}
         setTheme={auth.setTheme}
         onLogout={() => {
@@ -202,7 +205,10 @@ function Dashboard({ auth }) {
           auth.setUser(null)
         }}
       />
-      <section className="content-wrap" key={location.pathname}>
+      <section
+        className={location.pathname === '/games' ? 'content-wrap content-wrap--flush' : 'content-wrap'}
+        key={location.pathname}
+      >
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/profile" element={<ProfilePage token={auth.token} user={auth.user} setUser={auth.setUser} />} />
@@ -219,16 +225,24 @@ function CrossyGamePageRoute() {
   return <CrossyGamePage token={auth.token} onClaimSuccess={() => auth.fetchMe()} />
 }
 
-function RootApp() {
+function AppRoutes() {
   const auth = useAuth()
   return (
+    <Routes>
+      <Route path="/login" element={<AuthPage mode="login" />} />
+      <Route path="/register" element={<AuthPage mode="register" />} />
+      <Route path="/games/cross-road" element={<CrossyGamePageRoute />} />
+      <Route path="*" element={<Dashboard auth={auth} />} />
+    </Routes>
+  )
+}
+
+function RootApp() {
+  return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<AuthPage mode="login" onAuth={(token, user) => { auth.saveToken(token); auth.setUser(user) }} />} />
-        <Route path="/register" element={<AuthPage mode="register" onAuth={(token, user) => { auth.saveToken(token); auth.setUser(user) }} />} />
-        <Route path="/games/cross-road" element={<CrossyGamePageRoute />} />
-        <Route path="*" element={<Dashboard auth={auth} />} />
-      </Routes>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

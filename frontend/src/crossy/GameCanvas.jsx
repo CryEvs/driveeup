@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react'
 import { GameEngine } from './game/GameEngine'
 import { useCrossyStore } from './crossyStore'
 
-export function GameCanvas() {
+export function GameCanvas({ onReady }) {
   const containerRef = useRef(null)
   const engineRef = useRef(null)
+  const onReadyRef = useRef(onReady)
+  onReadyRef.current = onReady
 
   useEffect(() => {
     const el = containerRef.current
@@ -13,7 +15,11 @@ export function GameCanvas() {
     engineRef.current = engine
     let cancelled = false
     engine.start().then(() => {
-      if (cancelled) engine.dispose()
+      if (cancelled) {
+        engine.dispose()
+        return
+      }
+      onReadyRef.current?.()
     })
     return () => {
       cancelled = true

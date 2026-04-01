@@ -84,7 +84,7 @@ fun DriveeUpAppScaffold() {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .background(if (state.darkTheme) Color(0xFF0D1A0D) else Color(0xFFF4FBE9))
+                .background(Color.White)
         ) {
             if (state.token.isBlank() || state.user == null) {
                 AuthScreen(vm = vm)
@@ -133,6 +133,15 @@ private fun AppContent(
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         NavigationDrawerItem(
+                            label = { Text("Главная") },
+                            selected = page == AppPage.HOME,
+                            onClick = {
+                                page = AppPage.HOME
+                                scope.launch { drawerState.close() }
+                            },
+                            colors = navColors
+                        )
+                        NavigationDrawerItem(
                             label = { Text("Профиль") },
                             selected = page == AppPage.PROFILE,
                             onClick = {
@@ -155,15 +164,6 @@ private fun AppContent(
                             selected = page == AppPage.BATTLE_PASS,
                             onClick = {
                                 page = AppPage.BATTLE_PASS
-                                scope.launch { drawerState.close() }
-                            },
-                            colors = navColors
-                        )
-                        NavigationDrawerItem(
-                            label = { Text("Главная") },
-                            selected = page == AppPage.HOME,
-                            onClick = {
-                                page = AppPage.HOME
                                 scope.launch { drawerState.close() }
                             },
                             colors = navColors
@@ -276,11 +276,11 @@ private fun driveeupColorScheme(isDark: Boolean): ColorScheme {
             onTertiary = Color(0xFF1D2A08),
             tertiaryContainer = Color(0xFF2D4A22),
             onTertiaryContainer = Color(0xFFE7F8D7),
-            background = Color(0xFF0D1A0D),
-            onBackground = Color(0xFFE7F8D7),
-            surface = Color(0xFF162514),
-            onSurface = Color(0xFFE7F8D7),
-            surfaceVariant = Color(0xFF1E321B),
+            background = Color.White,
+            onBackground = Color(0xFF1D2A08),
+            surface = Color.White,
+            onSurface = Color(0xFF1D2A08),
+            surfaceVariant = Color(0xFF162514),
             onSurfaceVariant = Color(0xFFC8E6B0),
             error = Color(0xFFFFB4AB),
             onError = Color(0xFF690005),
@@ -302,7 +302,7 @@ private fun driveeupColorScheme(isDark: Boolean): ColorScheme {
             onTertiary = Color(0xFF1D2A08),
             tertiaryContainer = Color(0xFFE4F7CB),
             onTertiaryContainer = Color(0xFF20310C),
-            background = Color(0xFFF4FBE9),
+            background = Color.White,
             onBackground = Color(0xFF1D2A08),
             surface = Color.White,
             onSurface = Color(0xFF1D2A08),
