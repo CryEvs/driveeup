@@ -8,16 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenu
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +25,9 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -209,45 +211,41 @@ private fun AppContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemeDropdown(isDark: Boolean, onSelect: (Boolean) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val label = if (isDark) "Тёмная" else "Светлая"
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = label,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Тема") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Светлая") },
-                onClick = {
-                    onSelect(false)
-                    expanded = false
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Тёмная") },
-                onClick = {
-                    onSelect(true)
-                    expanded = false
-                }
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Тема", style = MaterialTheme.typography.labelMedium)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(label, modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Светлая") },
+                    onClick = {
+                        onSelect(false)
+                        expanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Тёмная") },
+                    onClick = {
+                        onSelect(true)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
