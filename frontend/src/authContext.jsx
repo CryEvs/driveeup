@@ -35,6 +35,7 @@ function readStoredOrAndroidToken() {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => readStoredOrAndroidToken())
   const [user, setUser] = useState(null)
+  const [authChecking, setAuthChecking] = useState(true)
   const [userLoading, setUserLoading] = useState(() => !!readStoredOrAndroidToken())
   const [theme, setTheme] = useState(() => localStorage.getItem('driveeup_theme') || 'light')
 
@@ -56,6 +57,7 @@ export function AuthProvider({ children }) {
       if (!token) {
         setUser(null)
         setUserLoading(false)
+        setAuthChecking(false)
         return
       }
       setUserLoading(true)
@@ -72,7 +74,10 @@ export function AuthProvider({ children }) {
       } catch {
         if (!cancelled) setUser(null)
       } finally {
-        if (!cancelled) setUserLoading(false)
+        if (!cancelled) {
+          setUserLoading(false)
+          setAuthChecking(false)
+        }
       }
     }
 
@@ -105,7 +110,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const value = { token, user, userLoading, setUser, saveToken, theme, setTheme, fetchMe }
+  const value = { token, user, userLoading, authChecking, setUser, saveToken, theme, setTheme, fetchMe }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

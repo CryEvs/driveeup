@@ -7,7 +7,9 @@ use App\Models\BattlePassLevel;
 use App\Models\BattlePassSeason;
 use App\Models\User;
 use App\Models\UserBattlePassProgress;
+use App\Models\UserBattlePassLevelReward;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class BattlePassController extends Controller
@@ -42,6 +44,12 @@ class BattlePassController extends Controller
             ->where('user_id', $user->id)
             ->where('season_id', $season->id)
             ->first();
+        $claimedLevelIds = UserBattlePassLevelReward::query()
+            ->where('user_id', $user->id)
+            ->where('season_id', $season->id)
+            ->pluck('level_id')
+            ->all();
+        $claimedLookup = array_flip($claimedLevelIds);
 
         return response()->json([
             'season' => [
@@ -50,13 +58,23 @@ class BattlePassController extends Controller
                 'startsAt' => optional($season->starts_at)->toIso8601String(),
                 'endsAt' => optional($season->ends_at)->toIso8601String(),
             ],
-            'levels' => $season->levels->map(function (BattlePassLevel $level) {
+            'levels' => $season->levels->map(function (BattlePassLevel $level) use ($claimedLookup, $progress) {
+                $seasonDriveCoin = (int) ($progress?->drive_coin_earned ?? 0);
+                $isUnlocked = $seasonDriveCoin >= (int) $level->required_drive_coin;
                 return [
                     'id' => $level->id,
                     'levelNumber' => (int) $level->level_number,
                     'requiredDriveCoin' => (int) $level->required_drive_coin,
                     'iconUrl' => $level->icon_url,
                     'description' => $level->description,
+                    // Gift details are hidden until level is unlocked.
+                    'giftType' => $isUnlocked ? $level->gift_type : null,
+                    'giftName' => $isUnlocked ? $level->gift_name : null,
+                    'giftDescription' => $isUnlocked ? $level->gift_description : null,
+                    'giftDriveCoin' => $isUnlocked ? (int) ($level->gift_drive_coin ?? 0) : null,
+                    'giftText' => $isUnlocked ? $level->gift_text : null,
+                    'giftHidden' => ! $isUnlocked,
+                    'giftClaimed' => isset($claimedLookup[$level->id]),
                     'role' => $level->role,
                 ];
             })->values(),
@@ -160,7 +178,16 @@ class BattlePassController extends Controller
             'requiredDriveCoin' => ['required', 'integer', 'min:0'],
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'description' => ['nullable', 'string', 'max:2000000'],
+            'giftName' => ['nullable', 'string', 'max:255'],
+            'giftDescription' => ['nullable', 'string', 'max:2000000'],
+            'giftDriveCoin' => ['nullable', 'integer', 'min:0'],
+            'giftType' => ['required', Rule::in(['DRIVECOIN', 'TEXT'])],
+            'giftText' => ['nullable', 'string', 'max:2000000'],
         ]);
+
+        if ($validated['giftType'] === 'TEXT' && empty($validated['giftText'])) {
+            return response()->json(['error' => 'Text gift requires giftText'], 422);
+        }
 
         $level = BattlePassLevel::create([
             'season_id' => $validated['seasonId'],
@@ -169,9 +196,46 @@ class BattlePassController extends Controller
             'required_drive_coin' => $validated['requiredDriveCoin'],
             'icon_url' => $validated['iconUrl'] ?? null,
             'description' => $validated['description'] ?? null,
+            'gift_name' => $validated['giftName'] ?? null,
+            'gift_description' => $validated['giftDescription'] ?? null,
+            'gift_type' => $validated['giftType'],
+            'gift_drive_coin' => $validated['giftType'] === 'DRIVECOIN' ? (int) ($validated['giftDriveCoin'] ?? 0) : 0,
+            'gift_text' => $validated['giftType'] === 'TEXT' ? ($validated['giftText'] ?? null) : null,
         ]);
 
         return response()->json($level, 201);
+    }
+
+    public function uploadLevelIcon(Request $request)
+    {
+        $admin = $this->resolveAdminFromToken($request);
+        if (! $admin) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'icon' => ['required', 'file', 'image', 'max:4096'],
+        ]);
+
+        $path = $validated['icon']->store('battle-pass-icons', 'public');
+        $relativePath = ltrim(str_replace('battle-pass-icons/', '', $path), '/');
+
+        return response()->json([
+            'iconUrl' => url('/api/battle-pass/level-icons/' . rawurlencode($relativePath)),
+        ], 201);
+    }
+
+    public function levelIcon(string $path)
+    {
+        $fullPath = 'battle-pass-icons/' . ltrim($path, '/');
+
+        if (! Storage::disk('public')->exists($fullPath)) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+
+        return response()->file(Storage::disk('public')->path($fullPath), [
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     public function updateLevel(Request $request, BattlePassLevel $level)
@@ -187,13 +251,27 @@ class BattlePassController extends Controller
             'requiredDriveCoin' => ['required', 'integer', 'min:0'],
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'description' => ['nullable', 'string', 'max:2000000'],
+            'giftName' => ['nullable', 'string', 'max:255'],
+            'giftDescription' => ['nullable', 'string', 'max:2000000'],
+            'giftDriveCoin' => ['nullable', 'integer', 'min:0'],
+            'giftType' => ['required', Rule::in(['DRIVECOIN', 'TEXT'])],
+            'giftText' => ['nullable', 'string', 'max:2000000'],
         ]);
+
+        if ($validated['giftType'] === 'TEXT' && empty($validated['giftText'])) {
+            return response()->json(['error' => 'Text gift requires giftText'], 422);
+        }
 
         $level->role = $validated['role'];
         $level->level_number = $validated['levelNumber'];
         $level->required_drive_coin = $validated['requiredDriveCoin'];
         $level->icon_url = $validated['iconUrl'] ?? null;
         $level->description = $validated['description'] ?? null;
+        $level->gift_name = $validated['giftName'] ?? null;
+        $level->gift_description = $validated['giftDescription'] ?? null;
+        $level->gift_type = $validated['giftType'];
+        $level->gift_drive_coin = $validated['giftType'] === 'DRIVECOIN' ? (int) ($validated['giftDriveCoin'] ?? 0) : 0;
+        $level->gift_text = $validated['giftType'] === 'TEXT' ? ($validated['giftText'] ?? null) : null;
         $level->save();
 
         return response()->json($level);
@@ -208,6 +286,69 @@ class BattlePassController extends Controller
 
         $level->delete();
         return response()->json(['ok' => true]);
+    }
+
+    public function claimLevelGift(Request $request, BattlePassLevel $level)
+    {
+        $user = $this->resolveUserFromToken($request);
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if ((string) $level->role !== (string) $user->role) {
+            return response()->json(['error' => 'Level is not available for your role'], 403);
+        }
+
+        $season = BattlePassSeason::query()->find($level->season_id);
+        if (! $season) {
+            return response()->json(['error' => 'Season not found'], 404);
+        }
+
+        $progress = UserBattlePassProgress::query()
+            ->where('user_id', $user->id)
+            ->where('season_id', $season->id)
+            ->first();
+        $seasonDriveCoin = (int) ($progress?->drive_coin_earned ?? 0);
+        if ($seasonDriveCoin < (int) $level->required_drive_coin) {
+            return response()->json(['error' => 'Level is not unlocked yet'], 422);
+        }
+
+        $alreadyClaimed = UserBattlePassLevelReward::query()
+            ->where('user_id', $user->id)
+            ->where('level_id', $level->id)
+            ->exists();
+        if ($alreadyClaimed) {
+            return response()->json(['error' => 'Gift already claimed'], 409);
+        }
+
+        $giftType = (string) ($level->gift_type ?: 'DRIVECOIN');
+        $giftDriveCoin = $giftType === 'DRIVECOIN' ? (int) ($level->gift_drive_coin ?? 0) : 0;
+        UserBattlePassLevelReward::create([
+            'user_id' => $user->id,
+            'season_id' => $season->id,
+            'level_id' => $level->id,
+            'gift_name' => $level->gift_name,
+            'gift_description' => $level->gift_description,
+            'gift_type' => $giftType,
+            'gift_drive_coin' => $giftDriveCoin,
+            'gift_text' => $giftType === 'TEXT' ? $level->gift_text : null,
+            'claimed_at' => now(),
+        ]);
+
+        if ($giftDriveCoin > 0) {
+            $user->drivee_coin = (int) $user->drivee_coin + $giftDriveCoin;
+            $user->total_drive_coin = (int) $user->total_drive_coin + $giftDriveCoin;
+            $user->save();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'giftType' => $giftType,
+            'giftDriveCoin' => $giftDriveCoin,
+            'giftText' => $giftType === 'TEXT' ? $level->gift_text : null,
+            'driveCoin' => (int) $user->drivee_coin,
+            'totalDriveCoin' => (int) $user->total_drive_coin,
+        ]);
     }
 
     private function resolveUserFromToken(Request $request): ?User

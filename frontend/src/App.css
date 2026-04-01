@@ -150,6 +150,12 @@ button {
   padding: 20px;
 }
 
+.content-card--wide {
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .bp-progress {
   width: 100%;
   height: 10px;
@@ -160,6 +166,7 @@ button {
 }
 
 .bp-progress__bar {
+  width: var(--bp-progress, 0%);
   height: 100%;
   background: linear-gradient(90deg, #74c515, #96ea28);
 }
@@ -172,9 +179,45 @@ button {
   margin-bottom: 14px;
 }
 
+.bp-progress--thread {
+  height: 6px;
+  position: relative;
+  margin: 0;
+}
+
+.bp-thread-board {
+  position: relative;
+  margin: 28px 0 20px;
+  min-height: 178px;
+}
+
+.bp-thread-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+}
+
+.bp-thread-board .bp-progress--thread {
+  position: absolute;
+  left: 88px;
+  right: 88px;
+  top: 38px;
+}
+
+.bp-level-point {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  width: 124px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .bp-level {
   width: 78px;
-  height: 92px;
+  height: 112px;
   margin-top: 0;
   border: 1px solid #b6cc95;
   background: #fff;
@@ -188,6 +231,18 @@ button {
   gap: 4px;
 }
 
+.bp-level__price {
+  font-size: 10px;
+  color: #889188;
+  font-weight: 600;
+}
+
+.bp-level__number {
+  font-size: 10px;
+  color: #889188;
+  font-weight: 600;
+}
+
 .bp-level--open {
   border-color: #74c515;
   box-shadow: 0 0 0 2px rgba(116, 197, 21, 0.2);
@@ -196,14 +251,113 @@ button {
 .bp-level img {
   width: 42px;
   height: 42px;
+  display: block;
   object-fit: cover;
   border-radius: 8px;
+}
+
+.bp-gift-claim {
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+}
+
+.bp-gift-status {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: #526642;
+  text-align: center;
+}
+
+@media (max-width: 780px) {
+  .bp-thread-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 72vh;
+    padding-right: 6px;
+  }
+
+  .bp-thread-board {
+    width: 100% !important;
+    min-height: 0;
+    margin: 12px 0 20px;
+    padding-left: 52px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .bp-thread-board .bp-progress--thread {
+    left: 26px;
+    right: auto;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    height: auto;
+    margin: 0;
+  }
+
+  .bp-progress__bar {
+    width: 100%;
+    height: var(--bp-progress, 0%);
+  }
+
+  .bp-level-point {
+    position: relative;
+    left: auto !important;
+    top: auto;
+    transform: none;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .bp-level {
+    margin-left: 0;
+  }
+
+  .bp-gift-claim,
+  .bp-gift-status {
+    margin-left: 0;
+  }
 }
 
 .bp-admin {
   margin-top: 16px;
   padding-top: 10px;
   border-top: 1px dashed #b6cc95;
+  display: block;
+}
+
+.bp-admin-col {
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+}
+
+.bp-field-label {
+  margin-top: 10px;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2e4a14;
+}
+
+.bp-admin-tabs {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bp-admin-tab-btn {
+  width: auto;
+  min-width: 140px;
+  margin-top: 0;
+}
+
+.bp-admin-tab-btn--active {
+  background: #74c515;
+  border-color: #5da30e;
 }
 
 .bp-admin-season {

@@ -18,7 +18,6 @@ services:
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
-      PMA_ABSOLUTE_URI: https://driveeup.ru/phpmyadmin/
     depends_on:
       - mysql
     ports:

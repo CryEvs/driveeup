@@ -178,13 +178,19 @@ fun GamesScreen() {
                                                         PREFS,
                                                         Context.MODE_PRIVATE
                                                     ).getLong(KEY_COOLDOWN_UNTIL, 0L)
+                                                    val authToken = ctx.getSharedPreferences(
+                                                        AUTH_PREFS,
+                                                        Context.MODE_PRIVATE
+                                                    ).getString(KEY_AUTH_TOKEN, "").orEmpty()
                                                     view?.evaluateJavascript(
                                                         "(function(){try{" +
                                                             "var k='$LS_COOLDOWN_KEY';" +
+                                                            "var tk=" + org.json.JSONObject.quote(authToken) + ";" +
                                                             "var p=" + prefsUntil + ";" +
                                                             "var ls=0;" +
                                                             "try{var x=localStorage.getItem(k);" +
                                                             "ls=x?parseInt(x,10):0;}catch(e){}" +
+                                                            "if(tk){try{localStorage.setItem('driveeup_token',tk);}catch(e){}}" +
                                                             "var u=Math.max(p,ls);" +
                                                             "var now=Date.now();" +
                                                             "if(u>now){localStorage.setItem(k,String(u));}" +

@@ -39,6 +39,26 @@ class AuthRepository {
         AuthResult(accessToken, user)
     }
 
+    suspend fun register(
+        firstName: String,
+        lastName: String,
+        email: String,
+        password: String
+    ): AuthResult = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("firstName", firstName)
+            .put("lastName", lastName)
+            .put("email", email)
+            .put("password", password)
+            .put("role", UserRole.PASSENGER.name)
+
+        val response = postJson("/auth/register", payload.toString(), token = null)
+        val accessToken = response.optString("accessToken")
+        if (accessToken.isBlank()) throw IllegalStateException(response.optString("error", "Ошибка регистрации"))
+        val user = parseUser(response.getJSONObject("user"))
+        AuthResult(accessToken, user)
+    }
+
     suspend fun me(token: String): User = withContext(Dispatchers.IO) {
         val response = getJson("/auth/me", token)
         parseUser(response)
@@ -101,6 +121,9 @@ class AuthRepository {
         return User(
             id = json.optLong("id"),
             email = json.optString("email"),
+            firstName = json.optString("firstName"),
+            lastName = json.optString("lastName"),
+            city = json.optString("city"),
             role = runCatching { UserRole.valueOf(json.optString("role", UserRole.PASSENGER.name)) }
                 .getOrDefault(UserRole.PASSENGER),
             driveCoin = if (json.has("driveCoin")) json.optLong("driveCoin") else json.optLong("driveeCoin"),

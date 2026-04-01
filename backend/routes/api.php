@@ -14,12 +14,15 @@ Route::post('/game/claim-drivee-coin', [GameRewardController::class, 'claimDrive
 Route::post('/game/claim-drive-coin', [GameRewardController::class, 'claimDriveeCoin']);
 
 Route::get('/battle-pass/current', [BattlePassController::class, 'current']);
+Route::get('/battle-pass/level-icons/{path}', [BattlePassController::class, 'levelIcon'])->where('path', '.*');
+Route::post('/battle-pass/levels/{level}/claim-gift', [BattlePassController::class, 'claimLevelGift']);
 
 Route::get('/admin/battle-pass/seasons', [BattlePassController::class, 'adminSeasons']);
 Route::post('/admin/battle-pass/seasons', [BattlePassController::class, 'createSeason']);
 Route::put('/admin/battle-pass/seasons/{season}', [BattlePassController::class, 'updateSeason']);
 Route::delete('/admin/battle-pass/seasons/{season}', [BattlePassController::class, 'deleteSeason']);
 Route::post('/admin/battle-pass/seasons/{season}/finish', [BattlePassController::class, 'finishSeason']);
+Route::post('/admin/battle-pass/levels/icon', [BattlePassController::class, 'uploadLevelIcon']);
 Route::post('/admin/battle-pass/levels', [BattlePassController::class, 'createLevel']);
 Route::put('/admin/battle-pass/levels/{level}', [BattlePassController::class, 'updateLevel']);
 Route::delete('/admin/battle-pass/levels/{level}', [BattlePassController::class, 'deleteLevel']);

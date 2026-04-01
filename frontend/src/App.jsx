@@ -8,6 +8,16 @@ import { AuthProvider, useAuth, API_BASE } from './authContext.jsx'
 import { LoadingDots } from './components/LoadingDots.jsx'
 import './App.css'
 
+function AppAuthLoader() {
+  return (
+    <main className="auth-page">
+      <section className="auth-card" style={{ display: 'flex', justifyContent: 'center', padding: '28px 20px' }}>
+        <LoadingDots label="Проверка авторизации" />
+      </section>
+    </main>
+  )
+}
+
 function AuthPage({ mode }) {
   const navigate = useNavigate()
   const auth = useAuth()
@@ -100,7 +110,7 @@ function Sidebar({ user, userLoading, theme, setTheme, onLogout }) {
           <Link to="/">Главная</Link>
           <Link to="/profile">Профиль</Link>
           <Link to="/games">Игры</Link>
-          <Link to="/battle-pass">Батл пас</Link>
+          <Link to="/battle-pass">Батл-Пасс</Link>
           {user?.isAdmin && <Link to="/admin/battle-pass">Админ панель</Link>}
         </nav>
         <div className="coins">
@@ -238,6 +248,7 @@ function CrossyGamePageRoute() {
 
 function AppRoutes() {
   const auth = useAuth()
+  if (auth.authChecking) return <AppAuthLoader />
   return (
     <Routes>
       <Route path="/login" element={<AuthPage mode="login" />} />

@@ -2,37 +2,45 @@ package ru.driveeup.mobile.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CurrencyCoin
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberDrawerState
@@ -44,6 +52,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -52,11 +61,14 @@ import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
 import ru.driveeup.mobile.ui.home.BattlePassScreen
+import ru.driveeup.mobile.ui.home.CityScreen
+import ru.driveeup.mobile.ui.home.DriveUpScreen
 import ru.driveeup.mobile.ui.home.GamesScreen
-import ru.driveeup.mobile.ui.home.HomeScreen
 import ru.driveeup.mobile.ui.home.ProfileScreen
 
-enum class AppPage { HOME, PROFILE, GAMES, BATTLE_PASS }
+enum class AppPage {
+    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, PROFILE, GAMES, BATTLE_PASS
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,9 +122,8 @@ private fun AppContent(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var page by remember { mutableStateOf(AppPage.HOME) }
-
-    val drawerBg = MaterialTheme.colorScheme.surfaceVariant
+    var page by remember { mutableStateOf(AppPage.CITY) }
+    val drawerBg = Color.White
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -125,64 +136,51 @@ private fun AppContent(
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("DriveUP", style = MaterialTheme.typography.titleLarge)
-                        Text("DriveCoin: ${state.user?.driveCoin ?: 0}")
-                        val navColors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        NavigationDrawerItem(
-                            label = { Text("Главная") },
-                            selected = page == AppPage.HOME,
-                            onClick = {
-                                page = AppPage.HOME
-                                scope.launch { drawerState.close() }
-                            },
-                            colors = navColors
-                        )
-                        NavigationDrawerItem(
-                            label = { Text("Профиль") },
-                            selected = page == AppPage.PROFILE,
-                            onClick = {
-                                page = AppPage.PROFILE
-                                scope.launch { drawerState.close() }
-                            },
-                            colors = navColors
-                        )
-                        NavigationDrawerItem(
-                            label = { Text("Игры") },
-                            selected = page == AppPage.GAMES,
-                            onClick = {
-                                page = AppPage.GAMES
-                                scope.launch { drawerState.close() }
-                            },
-                            colors = navColors
-                        )
-                        NavigationDrawerItem(
-                            label = { Text("Батл пас") },
-                            selected = page == AppPage.BATTLE_PASS,
-                            onClick = {
-                                page = AppPage.BATTLE_PASS
-                                scope.launch { drawerState.close() }
-                            },
-                            colors = navColors
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    page = AppPage.PROFILE
+                                    scope.launch { drawerState.close() }
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(shape = CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(42.dp)) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
+                            }
+                            Text(
+                                text = listOfNotNull(state.user?.firstName, state.user?.lastName)
+                                    .joinToString(" ")
+                                    .ifBlank { state.user?.email ?: "Профиль" },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 10.dp)
+                            )
+                            Text(">", color = Color.Gray)
+                        }
+                        Divider(color = Color(0xFFD7D7D7))
+                        MenuItem(page, AppPage.CITY, "Город", Icons.Default.LocationCity) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.HISTORY, "История заказов", Icons.Default.History) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.INTERCITY, "Межгород", Icons.Default.Language) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.SECURITY, "Безопасность", Icons.Default.Shield) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.SETTINGS, "Настройки", Icons.Default.Settings) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.HELP, "Помощь", Icons.Default.Info) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.SUPPORT, "Служба поддержки", Icons.Default.SupportAgent) { page = it; scope.launch { drawerState.close() } }
+                        MenuItem(page, AppPage.DRIVE_UP, "DriveUP", Icons.Default.CurrencyCoin) { page = it; scope.launch { drawerState.close() } }
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ThemeDropdown(
-                            isDark = state.darkTheme,
-                            onSelect = onToggleTheme
-                        )
+                    Column {
+                        Divider(color = Color(0xFFD7D7D7))
+                        Spacer(Modifier.height(12.dp))
                         Button(
-                            onClick = onLogout,
+                            onClick = {},
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFD9534F),
+                                containerColor = Color(0xFF96EA28),
                                 contentColor = Color.White
                             )
                         ) {
-                            Text("Выйти")
+                            Text("Стать водителем")
                         }
                     }
                 }
@@ -190,32 +188,37 @@ private fun AppContent(
         }
     ) {
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                TopAppBar(
-                    title = { Text("DriveUP") },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "menu")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-            }
+            containerColor = Color.White
         ) { padding ->
             Surface(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                color = MaterialTheme.colorScheme.background
+                color = Color.White
             ) {
                 when (page) {
-                    AppPage.HOME -> HomeScreen()
-                    AppPage.PROFILE -> ProfileScreen(user = state.user!!, onChangeAvatar = onChangeAvatar)
+                    AppPage.CITY -> CityScreen(
+                        driveCoin = state.user?.driveCoin ?: 0,
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                        onOpenDriveUp = { page = AppPage.DRIVE_UP }
+                    )
+                    AppPage.PROFILE -> ProfileScreen(
+                        user = state.user!!,
+                        onChangeAvatar = onChangeAvatar,
+                        onOpenMenu = { scope.launch { drawerState.open() } }
+                    )
+                    AppPage.DRIVE_UP -> DriveUpScreen(
+                        user = state.user!!,
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                        onOpenGames = { page = AppPage.GAMES },
+                        onOpenBattlePass = { page = AppPage.BATTLE_PASS }
+                    )
                     AppPage.GAMES -> GamesScreen()
                     AppPage.BATTLE_PASS -> BattlePassScreen()
+                    AppPage.HISTORY -> PlaceholderScreen("История заказов", onOpenMenu = { scope.launch { drawerState.open() } })
+                    AppPage.INTERCITY -> PlaceholderScreen("Межгород", onOpenMenu = { scope.launch { drawerState.open() } })
+                    AppPage.SECURITY -> PlaceholderScreen("Безопасность", onOpenMenu = { scope.launch { drawerState.open() } })
+                    AppPage.SETTINGS -> PlaceholderScreen("Настройки", onOpenMenu = { scope.launch { drawerState.open() } })
+                    AppPage.HELP -> PlaceholderScreen("Помощь", onOpenMenu = { scope.launch { drawerState.open() } })
+                    AppPage.SUPPORT -> PlaceholderScreen("Служба поддержки", onOpenMenu = { scope.launch { drawerState.open() } })
                 }
             }
         }
@@ -223,41 +226,44 @@ private fun AppContent(
 }
 
 @Composable
-private fun ThemeDropdown(isDark: Boolean, onSelect: (Boolean) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val label = if (isDark) "Тёмная" else "Светлая"
+private fun MenuItem(current: AppPage, target: AppPage, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: (AppPage) -> Unit) {
+    NavigationDrawerItem(
+        icon = { Icon(icon, contentDescription = null, tint = Color.Gray) },
+        label = { Text(label) },
+        selected = current == target,
+        onClick = { onClick(target) },
+        colors = NavigationDrawerItemDefaults.colors(
+            selectedContainerColor = Color(0xFFF2F2F2),
+            selectedTextColor = Color(0xFF1D2A08),
+            unselectedTextColor = Color(0xFF4E4E4E)
+        )
+    )
+}
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Тема", style = MaterialTheme.typography.labelMedium)
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(label, modifier = Modifier.weight(1f))
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Светлая") },
-                    onClick = {
-                        onSelect(false)
-                        expanded = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Тёмная") },
-                    onClick = {
-                        onSelect(true)
-                        expanded = false
-                    }
-                )
-            }
+@Composable
+private fun PlaceholderScreen(title: String, onOpenMenu: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(42.dp),
+            shape = CircleShape,
+            color = Color(0xFFF0F0F0)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = null,
+                tint = Color(0xFF6C6C6C),
+                modifier = Modifier
+                    .padding(10.dp)
+                    .clickable(onClick = onOpenMenu)
+            )
         }
+        Spacer(Modifier.height(20.dp))
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text("Раздел в разработке.")
     }
 }
 

@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.data.AuthRepository
 import ru.driveeup.mobile.domain.User
-import ru.driveeup.mobile.domain.UserRole
 
 data class AuthUiState(
     val loading: Boolean = false,
@@ -61,15 +60,19 @@ class AuthViewModel(
         }
     }
 
-    fun register(email: String, password: String, role: UserRole) {
-        if (email.isBlank() || password.isBlank()) {
+    fun register(firstName: String, lastName: String, email: String, password: String, confirmPassword: String) {
+        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
             _uiState.value = _uiState.value.copy(error = "Заполни все поля")
+            return
+        }
+        if (password != confirmPassword) {
+            _uiState.value = _uiState.value.copy(error = "Пароли не совпадают")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true, error = null)
-            runCatching { repo.register(email, password, role) }
+            runCatching { repo.register(firstName, lastName, email, password) }
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(
                         loading = false,

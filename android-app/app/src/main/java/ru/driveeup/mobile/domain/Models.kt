@@ -5,6 +5,9 @@ enum class UserRole { PASSENGER, DRIVER, ADMIN }
 data class User(
     val id: Long,
     val email: String,
+    val firstName: String = "",
+    val lastName: String = "",
+    val city: String = "",
     val role: UserRole,
     val driveCoin: Long,
     val totalDriveCoin: Long = 0,
