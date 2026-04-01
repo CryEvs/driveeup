@@ -12,11 +12,40 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
@@ -80,10 +109,12 @@ private fun AppContent(
     val scope = rememberCoroutineScope()
     var page by remember { mutableStateOf(AppPage.HOME) }
 
+    val drawerBg = MaterialTheme.colorScheme.surfaceVariant
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(drawerContainerColor = drawerBg) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -91,29 +122,53 @@ private fun AppContent(
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("DriveeUP", style = MaterialTheme.typography.titleLarge)
-                    Text("DriveeCoin: ${state.user?.driveeCoin ?: 0}")
-                    NavigationDrawerItem(label = { Text("Профиль") }, selected = page == AppPage.PROFILE, onClick = {
-                        page = AppPage.PROFILE
-                        scope.launch { drawerState.close() }
-                    })
-                    NavigationDrawerItem(label = { Text("Батл пас") }, selected = page == AppPage.BATTLE_PASS, onClick = {
-                        page = AppPage.BATTLE_PASS
-                        scope.launch { drawerState.close() }
-                    })
-                    NavigationDrawerItem(label = { Text("Главная") }, selected = page == AppPage.HOME, onClick = {
-                        page = AppPage.HOME
-                        scope.launch { drawerState.close() }
-                    })
+                        Text("DriveeUP", style = MaterialTheme.typography.titleLarge)
+                        Text("DriveeCoin: ${state.user?.driveeCoin ?: 0}")
+                        val navColors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        NavigationDrawerItem(
+                            label = { Text("Профиль") },
+                            selected = page == AppPage.PROFILE,
+                            onClick = {
+                                page = AppPage.PROFILE
+                                scope.launch { drawerState.close() }
+                            },
+                            colors = navColors
+                        )
+                        NavigationDrawerItem(
+                            label = { Text("Батл пас") },
+                            selected = page == AppPage.BATTLE_PASS,
+                            onClick = {
+                                page = AppPage.BATTLE_PASS
+                                scope.launch { drawerState.close() }
+                            },
+                            colors = navColors
+                        )
+                        NavigationDrawerItem(
+                            label = { Text("Главная") },
+                            selected = page == AppPage.HOME,
+                            onClick = {
+                                page = AppPage.HOME
+                                scope.launch { drawerState.close() }
+                            },
+                            colors = navColors
+                        )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Тема")
-                        Button(onClick = { onToggleTheme(false) }, modifier = Modifier.fillMaxWidth()) { Text("Светлая") }
-                        Button(onClick = { onToggleTheme(true) }, modifier = Modifier.fillMaxWidth()) { Text("Тёмная") }
+                        ThemeDropdown(
+                            isDark = state.darkTheme,
+                            onSelect = onToggleTheme
+                        )
                         Button(
                             onClick = onLogout,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD9534F), contentColor = Color.White)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFD9534F),
+                                contentColor = Color.White
+                            )
                         ) {
                             Text("Выйти")
                         }
@@ -123,6 +178,7 @@ private fun AppContent(
         }
     ) {
         Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
                     title = { Text("DriveeUP") },
@@ -130,11 +186,19 @@ private fun AppContent(
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "menu")
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
             }
         ) { padding ->
-            Surface(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Surface(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                color = MaterialTheme.colorScheme.background
+            ) {
                 when (page) {
                     AppPage.HOME -> HomeScreen()
                     AppPage.PROFILE -> ProfileScreen(user = state.user!!, onChangeAvatar = onChangeAvatar)
@@ -145,24 +209,101 @@ private fun AppContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeDropdown(isDark: Boolean, onSelect: (Boolean) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val label = if (isDark) "Тёмная" else "Светлая"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Тема") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Светлая") },
+                onClick = {
+                    onSelect(false)
+                    expanded = false
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Тёмная") },
+                onClick = {
+                    onSelect(true)
+                    expanded = false
+                }
+            )
+        }
+    }
+}
+
 private fun driveeupColorScheme(isDark: Boolean): ColorScheme {
     return if (isDark) {
         darkColorScheme(
             primary = Color(0xFF96EA28),
             onPrimary = Color(0xFF1D2A08),
+            primaryContainer = Color(0xFF2D4A22),
+            onPrimaryContainer = Color(0xFFE7F8D7),
+            secondary = Color(0xFF74C515),
+            onSecondary = Color(0xFF1D2A08),
+            secondaryContainer = Color(0xFF3C652D),
+            onSecondaryContainer = Color(0xFFE7F8D7),
+            tertiary = Color(0xFF96EA28),
+            onTertiary = Color(0xFF1D2A08),
+            tertiaryContainer = Color(0xFF2D4A22),
+            onTertiaryContainer = Color(0xFFE7F8D7),
             background = Color(0xFF0D1A0D),
             onBackground = Color(0xFFE7F8D7),
             surface = Color(0xFF162514),
-            onSurface = Color(0xFFE7F8D7)
+            onSurface = Color(0xFFE7F8D7),
+            surfaceVariant = Color(0xFF1E321B),
+            onSurfaceVariant = Color(0xFFC8E6B0),
+            error = Color(0xFFFFB4AB),
+            onError = Color(0xFF690005),
+            outline = Color(0xFF4F7A3F),
+            outlineVariant = Color(0xFF3C652D),
+            surfaceTint = Color.Transparent
         )
     } else {
         lightColorScheme(
             primary = Color(0xFF96EA28),
             onPrimary = Color(0xFF1D2A08),
+            primaryContainer = Color(0xFFE4F7CB),
+            onPrimaryContainer = Color(0xFF20310C),
+            secondary = Color(0xFF74C515),
+            onSecondary = Color(0xFF1D2A08),
+            secondaryContainer = Color(0xFFD7EFB5),
+            onSecondaryContainer = Color(0xFF20310C),
+            tertiary = Color(0xFF74C515),
+            onTertiary = Color(0xFF1D2A08),
+            tertiaryContainer = Color(0xFFE4F7CB),
+            onTertiaryContainer = Color(0xFF20310C),
             background = Color(0xFFF4FBE9),
             onBackground = Color(0xFF1D2A08),
             surface = Color.White,
-            onSurface = Color(0xFF1D2A08)
+            onSurface = Color(0xFF1D2A08),
+            surfaceVariant = Color(0xFFF2FBE4),
+            onSurfaceVariant = Color(0xFF20310C),
+            error = Color(0xFFC93232),
+            onError = Color.White,
+            outline = Color(0xFFB4D98B),
+            outlineVariant = Color(0xFFD7EFB5),
+            surfaceTint = Color.Transparent
         )
     }
 }

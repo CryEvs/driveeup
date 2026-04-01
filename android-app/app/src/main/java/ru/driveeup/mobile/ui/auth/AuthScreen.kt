@@ -38,9 +38,11 @@ fun AuthScreen(vm: AuthViewModel) {
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
-                tonalElevation = 2.dp,
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
