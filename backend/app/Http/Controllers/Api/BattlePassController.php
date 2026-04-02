@@ -37,7 +37,7 @@ class BattlePassController extends Controller
                 'season' => null,
                 'levels' => [],
                 'seasonDriveCoin' => 0,
-                'totalDriveCoin' => (int) $user->total_drive_coin,
+                'totalDriveCoin' => round((float) $user->total_drive_coin, 2),
             ]);
         }
 
@@ -62,25 +62,28 @@ class BattlePassController extends Controller
             'levels' => $season->levels->map(function (BattlePassLevel $level) use ($claimedLookup, $progress) {
                 $seasonDriveCoin = (int) ($progress?->drive_coin_earned ?? 0);
                 $isUnlocked = $seasonDriveCoin >= (int) $level->required_drive_coin;
+                $giftType = $level->gift_type ?: 'DRIVECOIN';
                 return [
                     'id' => $level->id,
                     'levelNumber' => (int) $level->level_number,
+                    'levelTitle' => $level->title,
                     'requiredDriveCoin' => (int) $level->required_drive_coin,
                     'iconUrl' => $level->icon_url,
                     'description' => $level->description,
                     // Gift details are hidden until level is unlocked.
-                    'giftType' => $isUnlocked ? $level->gift_type : null,
+                    'giftType' => $isUnlocked ? $giftType : null,
                     'giftName' => $isUnlocked ? $level->gift_name : null,
                     'giftDescription' => $isUnlocked ? $level->gift_description : null,
-                    'giftDriveCoin' => $isUnlocked ? (int) ($level->gift_drive_coin ?? 0) : null,
-                    'giftText' => $isUnlocked ? $level->gift_text : null,
+                    'giftDriveCoin' => $isUnlocked && $giftType === 'DRIVECOIN' ? (int) ($level->gift_drive_coin ?? 0) : null,
+                    'giftText' => $isUnlocked && $giftType === 'TEXT' ? $level->gift_text : null,
+                    'giftPromoCode' => $isUnlocked && $giftType === 'PROMO_CODE' ? $level->gift_promo_code : null,
                     'giftHidden' => ! $isUnlocked,
                     'giftClaimed' => isset($claimedLookup[$level->id]),
                     'role' => $level->role,
                 ];
             })->values(),
             'seasonDriveCoin' => (int) ($progress?->drive_coin_earned ?? 0),
-            'totalDriveCoin' => (int) $user->total_drive_coin,
+            'totalDriveCoin' => round((float) $user->total_drive_coin, 2),
             'role' => $user->role,
         ]);
     }
@@ -177,23 +180,27 @@ class BattlePassController extends Controller
             'role' => ['required', Rule::in(['PASSENGER', 'DRIVER'])],
             'levelNumber' => ['required', 'integer', 'min:1'],
             'requiredDriveCoin' => ['required', 'integer', 'min:0'],
+            'title' => ['nullable', 'string', 'max:255'],
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'description' => ['nullable', 'string', 'max:2000000'],
             'giftName' => ['nullable', 'string', 'max:255'],
             'giftDescription' => ['nullable', 'string', 'max:2000000'],
             'giftDriveCoin' => ['nullable', 'integer', 'min:0'],
-            'giftType' => ['required', Rule::in(['DRIVECOIN', 'TEXT'])],
+            'giftType' => ['required', Rule::in(['DRIVECOIN', 'TEXT', 'PROMO_CODE'])],
             'giftText' => ['nullable', 'string', 'max:2000000'],
+            'giftPromoCode' => ['nullable', 'string', 'max:512'],
         ]);
 
-        if ($validated['giftType'] === 'TEXT' && empty($validated['giftText'])) {
-            return response()->json(['error' => 'Text gift requires giftText'], 422);
+        $err = $this->validateGiftPayload($validated);
+        if ($err !== null) {
+            return response()->json(['error' => $err], 422);
         }
 
         $level = BattlePassLevel::create([
             'season_id' => $validated['seasonId'],
             'role' => $validated['role'],
             'level_number' => $validated['levelNumber'],
+            'title' => $validated['title'] ?? null,
             'required_drive_coin' => $validated['requiredDriveCoin'],
             'icon_url' => $validated['iconUrl'] ?? null,
             'description' => $validated['description'] ?? null,
@@ -202,6 +209,7 @@ class BattlePassController extends Controller
             'gift_type' => $validated['giftType'],
             'gift_drive_coin' => $validated['giftType'] === 'DRIVECOIN' ? (int) ($validated['giftDriveCoin'] ?? 0) : 0,
             'gift_text' => $validated['giftType'] === 'TEXT' ? ($validated['giftText'] ?? null) : null,
+            'gift_promo_code' => $validated['giftType'] === 'PROMO_CODE' ? ($validated['giftPromoCode'] ?? null) : null,
         ]);
 
         return response()->json($level, 201);
@@ -250,21 +258,25 @@ class BattlePassController extends Controller
             'role' => ['required', Rule::in(['PASSENGER', 'DRIVER'])],
             'levelNumber' => ['required', 'integer', 'min:1'],
             'requiredDriveCoin' => ['required', 'integer', 'min:0'],
+            'title' => ['nullable', 'string', 'max:255'],
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'description' => ['nullable', 'string', 'max:2000000'],
             'giftName' => ['nullable', 'string', 'max:255'],
             'giftDescription' => ['nullable', 'string', 'max:2000000'],
             'giftDriveCoin' => ['nullable', 'integer', 'min:0'],
-            'giftType' => ['required', Rule::in(['DRIVECOIN', 'TEXT'])],
+            'giftType' => ['required', Rule::in(['DRIVECOIN', 'TEXT', 'PROMO_CODE'])],
             'giftText' => ['nullable', 'string', 'max:2000000'],
+            'giftPromoCode' => ['nullable', 'string', 'max:512'],
         ]);
 
-        if ($validated['giftType'] === 'TEXT' && empty($validated['giftText'])) {
-            return response()->json(['error' => 'Text gift requires giftText'], 422);
+        $err = $this->validateGiftPayload($validated);
+        if ($err !== null) {
+            return response()->json(['error' => $err], 422);
         }
 
         $level->role = $validated['role'];
         $level->level_number = $validated['levelNumber'];
+        $level->title = $validated['title'] ?? null;
         $level->required_drive_coin = $validated['requiredDriveCoin'];
         $level->icon_url = $validated['iconUrl'] ?? null;
         $level->description = $validated['description'] ?? null;
@@ -273,6 +285,7 @@ class BattlePassController extends Controller
         $level->gift_type = $validated['giftType'];
         $level->gift_drive_coin = $validated['giftType'] === 'DRIVECOIN' ? (int) ($validated['giftDriveCoin'] ?? 0) : 0;
         $level->gift_text = $validated['giftType'] === 'TEXT' ? ($validated['giftText'] ?? null) : null;
+        $level->gift_promo_code = $validated['giftType'] === 'PROMO_CODE' ? ($validated['giftPromoCode'] ?? null) : null;
         $level->save();
 
         return response()->json($level);
@@ -324,6 +337,7 @@ class BattlePassController extends Controller
 
         $giftType = (string) ($level->gift_type ?: 'DRIVECOIN');
         $giftDriveCoin = $giftType === 'DRIVECOIN' ? (int) ($level->gift_drive_coin ?? 0) : 0;
+        $giftPromo = $giftType === 'PROMO_CODE' ? ($level->gift_promo_code ?? null) : null;
         UserBattlePassLevelReward::create([
             'user_id' => $user->id,
             'season_id' => $season->id,
@@ -333,6 +347,7 @@ class BattlePassController extends Controller
             'gift_type' => $giftType,
             'gift_drive_coin' => $giftDriveCoin,
             'gift_text' => $giftType === 'TEXT' ? $level->gift_text : null,
+            'gift_promo_code' => $giftPromo,
             'claimed_at' => now(),
         ]);
 
@@ -348,14 +363,40 @@ class BattlePassController extends Controller
             ]);
         }
 
+        if ($giftType === 'PROMO_CODE' && $giftPromo) {
+            UserNotification::create([
+                'user_id' => $user->id,
+                'type' => 'BATTLE_PASS_PROMO',
+                'title' => 'Промокод Драйв-Пасса',
+                'body' => 'Ваш промокод: ' . $giftPromo,
+            ]);
+        }
+
         return response()->json([
             'ok' => true,
             'giftType' => $giftType,
             'giftDriveCoin' => $giftDriveCoin,
             'giftText' => $giftType === 'TEXT' ? $level->gift_text : null,
+            'giftPromoCode' => $giftPromo,
             'driveCoin' => round((float) $user->drivee_coin, 2),
             'totalDriveCoin' => round((float) $user->total_drive_coin, 2),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function validateGiftPayload(array $validated): ?string
+    {
+        $t = $validated['giftType'];
+        if ($t === 'TEXT' && empty($validated['giftText'])) {
+            return 'Text gift requires giftText';
+        }
+        if ($t === 'PROMO_CODE' && empty(trim((string) ($validated['giftPromoCode'] ?? '')))) {
+            return 'Promo gift requires giftPromoCode';
+        }
+
+        return null;
     }
 
     private function resolveUserFromToken(Request $request): ?User

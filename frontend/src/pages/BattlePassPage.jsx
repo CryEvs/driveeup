@@ -77,7 +77,7 @@ export function BattlePassPage({ token, user }) {
 
   return (
     <section className="content-card content-card--wide">
-      <h1>Батл-пасс</h1>
+      <h1>Драйв-Пасс</h1>
       {loading && <p>Загрузка...</p>}
       {error && <p className="error">{error}</p>}
       {!loading && (
@@ -136,24 +136,35 @@ export function BattlePassPage({ token, user }) {
             </div>
           </div>
           {isAdmin && (
-            <p><Link to="/admin/battle-pass">Открыть экран админ-панели Батл-пасса</Link></p>
+            <p><Link to="/admin/battle-pass">Админ-панель Драйв-Пасса</Link></p>
           )}
         </>
       )}
       {selectedLevel && (
         <div className="bp-level-modal" onClick={() => setSelectedLevel(null)}>
           <div className="bp-level-modal__card" onClick={(e) => e.stopPropagation()}>
-            <h3>Уровень {selectedLevel.levelNumber}</h3>
+            <h3>{selectedLevel.levelTitle || `Уровень ${selectedLevel.levelNumber}`}</h3>
             {selectedLevel.iconUrl ? <img src={selectedLevel.iconUrl} alt="Иконка уровня" /> : null}
             <p>Роль: {selectedLevel.role}</p>
             <p>Нужно DriveCoin за сезон: {selectedLevel.requiredDriveCoin}</p>
             {seasonDriveCoin >= Number(selectedLevel.requiredDriveCoin || 0) ? (
               <>
                 <p>Подарок: {selectedLevel.giftName || 'Не задан'}</p>
-                <p>Тип подарка: {selectedLevel.giftType === 'TEXT' ? 'Текст' : 'DriveCoin'}</p>
-                {selectedLevel.giftType === 'TEXT'
-                  ? <p>Текст подарка: {selectedLevel.giftText || 'Не задан'}</p>
-                  : <p>DriveCoin в подарке: {selectedLevel.giftDriveCoin || 0}</p>}
+                <p>
+                  Тип подарка:{' '}
+                  {selectedLevel.giftType === 'PROMO_CODE'
+                    ? 'Промокод'
+                    : selectedLevel.giftType === 'TEXT'
+                      ? 'Текст'
+                      : 'ДрайвКойны'}
+                </p>
+                {selectedLevel.giftType === 'TEXT' ? (
+                  <p>Текст подарка: {selectedLevel.giftText || 'Не задан'}</p>
+                ) : selectedLevel.giftType === 'PROMO_CODE' ? (
+                  <p>Промокод: {selectedLevel.giftPromoCode || 'Не задан'}</p>
+                ) : (
+                  <p>ДрайвКойны в подарке: {selectedLevel.giftDriveCoin || 0}</p>
+                )}
                 <p>{selectedLevel.giftDescription || 'Без описания подарка'}</p>
                 {selectedLevel.giftClaimed ? (
                   <p>Статус подарка: получен</p>

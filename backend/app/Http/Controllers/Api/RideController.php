@@ -403,71 +403,88 @@ class RideController extends Controller
         $ride->save();
 
         if ($newStatus === 'completed') {
-            $this->accruePassengerRideCoins((int) $ride->id);
+            $this->accrueRideCompletionCoins((int) $ride->id);
         }
 
         return response()->json($this->transformRide($ride->fresh(['passenger', 'driver'])));
     }
 
     /**
-     * Начисление DriveCoin пассажиру: стоимость поездки × 0.1 × коэффициент рейтинга.
-     * Идемпотентно: один раз на заказ (ride_coin_credited), в транзакции с блокировкой строк.
+     * Начисление DriveCoin пассажиру и водителю: стоимость поездки × 0.1 × коэффициент рейтинга каждого.
+     * Идемпотентно: флаги ride_coin_credited / driver_ride_coin_credited.
      */
-    private function accruePassengerRideCoins(int $rideId): void
+    private function accrueRideCompletionCoins(int $rideId): void
     {
         try {
             DB::transaction(function () use ($rideId) {
-                $lockedRide = RideOrder::lockForUpdate()->find($rideId);
-                if (! $lockedRide || $lockedRide->ride_coin_credited) {
+                $ride = RideOrder::lockForUpdate()->find($rideId);
+                if (! $ride) {
                     return;
                 }
 
-                $passenger = User::lockForUpdate()->find($lockedRide->passenger_id);
-                if (! $passenger) {
-                    return;
-                }
-
-                $priceRub = (float) ($lockedRide->agreed_price_rub ?? $lockedRide->price_rub);
+                $priceRub = (float) ($ride->agreed_price_rub ?? $ride->price_rub);
                 if ($priceRub <= 0) {
                     return;
                 }
 
-                $rating = (float) ($passenger->rating_avg ?? 5.0);
-                $coeff = $this->passengerRideRatingCoefficient($rating);
-                $amount = round($priceRub * 0.1 * $coeff, 2);
-                if ($amount <= 0) {
-                    return;
+                if (! $ride->ride_coin_credited && $ride->passenger_id) {
+                    $passenger = User::lockForUpdate()->find($ride->passenger_id);
+                    if ($passenger) {
+                        $rating = (float) ($passenger->rating_avg ?? 5.0);
+                        $coeff = $this->rideRatingCoefficient($rating);
+                        $amount = round($priceRub * 0.1 * $coeff, 2);
+                        if ($amount > 0) {
+                            $passenger->drivee_coin = round((float) $passenger->drivee_coin + $amount, 2);
+                            $passenger->total_drive_coin = round((float) $passenger->total_drive_coin + $amount, 2);
+                            $passenger->save();
+                            $ride->ride_coin_credited = true;
+                            $this->notifyRideCoinAccrual($passenger->id, $amount, $priceRub, $rating, $coeff);
+                        }
+                    }
                 }
 
-                $passenger->drivee_coin = round((float) $passenger->drivee_coin + $amount, 2);
-                $passenger->total_drive_coin = round((float) $passenger->total_drive_coin + $amount, 2);
-                $passenger->save();
-
-                $lockedRide->ride_coin_credited = true;
-                $lockedRide->save();
-
-                $amountStr = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
-                $coeffStr = rtrim(rtrim(number_format($coeff, 2, '.', ''), '0'), '.');
-                $ratingStr = number_format($rating, 2, '.', '');
-
-                try {
-                    UserNotification::create([
-                        'user_id' => $passenger->id,
-                        'type' => 'DRIVECOIN_ACCRUAL',
-                        'title' => 'Начисление ДрайвКойнов',
-                        'body' => 'Начисление койнов за поездку: '.$amountStr
-                            .' (поездка '.(int) round($priceRub).' ₽, ваш рейтинг '.$ratingStr.', коэффициент '.$coeffStr.')',
-                    ]);
-                } catch (\Throwable $e) {
-                    \Log::warning('ride coin notification: '.$e->getMessage());
+                if (! $ride->driver_ride_coin_credited && $ride->driver_id) {
+                    $driver = User::lockForUpdate()->find($ride->driver_id);
+                    if ($driver) {
+                        $rating = (float) ($driver->rating_avg ?? 5.0);
+                        $coeff = $this->rideRatingCoefficient($rating);
+                        $amount = round($priceRub * 0.1 * $coeff, 2);
+                        if ($amount > 0) {
+                            $driver->drivee_coin = round((float) $driver->drivee_coin + $amount, 2);
+                            $driver->total_drive_coin = round((float) $driver->total_drive_coin + $amount, 2);
+                            $driver->save();
+                            $ride->driver_ride_coin_credited = true;
+                            $this->notifyRideCoinAccrual($driver->id, $amount, $priceRub, $rating, $coeff);
+                        }
+                    }
                 }
+
+                $ride->save();
             });
         } catch (\Throwable $e) {
-            \Log::error('accruePassengerRideCoins: '.$e->getMessage(), ['rideId' => $rideId]);
+            \Log::error('accrueRideCompletionCoins: '.$e->getMessage(), ['rideId' => $rideId]);
         }
     }
 
-    private function passengerRideRatingCoefficient(float $rating): float
+    private function notifyRideCoinAccrual(int $userId, float $amount, float $priceRub, float $rating, float $coeff): void
+    {
+        $amountStr = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
+        $coeffStr = rtrim(rtrim(number_format($coeff, 2, '.', ''), '0'), '.');
+        $ratingStr = number_format($rating, 2, '.', '');
+        try {
+            UserNotification::create([
+                'user_id' => $userId,
+                'type' => 'DRIVECOIN_ACCRUAL',
+                'title' => 'Начисление ДрайвКойнов',
+                'body' => 'Начисление койнов за поездку: '.$amountStr
+                    .' (поездка '.(int) round($priceRub).' ₽, ваш рейтинг '.$ratingStr.', коэффициент '.$coeffStr.')',
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('ride coin notification: '.$e->getMessage());
+        }
+    }
+
+    private function rideRatingCoefficient(float $rating): float
     {
         $r = max(0.0, min(5.0, $rating));
         if ($r >= 4.95) {

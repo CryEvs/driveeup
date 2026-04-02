@@ -11,6 +11,7 @@ class BattlePassLevel extends Model
         'season_id',
         'role',
         'level_number',
+        'title',
         'required_drive_coin',
         'icon_url',
         'description',
@@ -19,6 +20,7 @@ class BattlePassLevel extends Model
         'gift_type',
         'gift_drive_coin',
         'gift_text',
+        'gift_promo_code',
     ];
 
     protected $casts = [

@@ -24,6 +24,7 @@ class RideOrder extends Model
         'passenger_rating',
         'driver_rating',
         'ride_coin_credited',
+        'driver_ride_coin_credited',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class RideOrder extends Model
             'to_lon' => 'float',
             'passenger_exiting' => 'boolean',
             'ride_coin_credited' => 'boolean',
+            'driver_ride_coin_credited' => 'boolean',
         ];
     }
 

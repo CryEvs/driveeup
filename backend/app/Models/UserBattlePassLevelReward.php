@@ -16,6 +16,7 @@ class UserBattlePassLevelReward extends Model
         'gift_type',
         'gift_drive_coin',
         'gift_text',
+        'gift_promo_code',
         'claimed_at',
     ];
 

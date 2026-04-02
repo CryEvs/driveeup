@@ -15,12 +15,14 @@ export function AdminBattlePassPage({ token, user }) {
     levelNumber: 1,
     requiredDriveCoin: 0,
     iconUrl: '',
+    levelTitle: '',
     description: '',
     giftName: '',
     giftDescription: '',
     giftType: 'DRIVECOIN',
     giftDriveCoin: 0,
     giftText: '',
+    giftPromoCode: '',
   })
   const [editingSeasonId, setEditingSeasonId] = useState(null)
   const [editingLevelId, setEditingLevelId] = useState(null)
@@ -78,12 +80,15 @@ export function AdminBattlePassPage({ token, user }) {
 
   async function submitLevel(e) {
     e.preventDefault()
+    const { levelTitle, ...rest } = levelForm
     const payload = {
-      ...levelForm,
+      ...rest,
       seasonId: Number(levelForm.seasonId),
       levelNumber: Number(levelForm.levelNumber),
       requiredDriveCoin: Number(levelForm.requiredDriveCoin),
       giftDriveCoin: Number(levelForm.giftDriveCoin),
+      title: levelTitle || null,
+      giftPromoCode: levelForm.giftType === 'PROMO_CODE' ? levelForm.giftPromoCode : '',
     }
     try {
       if (editingLevelId) await api(`/admin/battle-pass/levels/${editingLevelId}`, 'PUT', payload)
@@ -94,12 +99,14 @@ export function AdminBattlePassPage({ token, user }) {
         levelNumber: 1,
         requiredDriveCoin: 0,
         iconUrl: '',
+        levelTitle: '',
         description: '',
         giftName: '',
         giftDescription: '',
         giftType: 'DRIVECOIN',
         giftDriveCoin: 0,
         giftText: '',
+        giftPromoCode: '',
       })
       setEditingLevelId(null)
       await load()
@@ -134,7 +141,7 @@ export function AdminBattlePassPage({ token, user }) {
 
   return (
     <section className="content-card">
-      <h1>Админ-панель Батл-пасса</h1>
+      <h1>Админ-панель Драйв-Пасса</h1>
       {error && <p className="error">{error}</p>}
       {loading ? <p>Загрузка...</p> : null}
 
@@ -195,6 +202,12 @@ export function AdminBattlePassPage({ token, user }) {
             {uploadingIcon && <p>Загрузка иконки...</p>}
             <label className="bp-field-label">URL иконки (после загрузки подставится автоматически)</label>
             <input placeholder="Иконка URL" value={levelForm.iconUrl} onChange={(e) => setLevelForm((s) => ({ ...s, iconUrl: e.target.value }))} />
+            <label className="bp-field-label">Название уровня</label>
+            <input
+              placeholder="Как отображается уровень в приложении"
+              value={levelForm.levelTitle}
+              onChange={(e) => setLevelForm((s) => ({ ...s, levelTitle: e.target.value }))}
+            />
             <label className="bp-field-label">Описание уровня</label>
             <textarea placeholder="Описание" value={levelForm.description} onChange={(e) => setLevelForm((s) => ({ ...s, description: e.target.value }))} />
             <label className="bp-field-label">Название подарка</label>
@@ -203,13 +216,23 @@ export function AdminBattlePassPage({ token, user }) {
             <textarea placeholder="Что получает пользователь" value={levelForm.giftDescription} onChange={(e) => setLevelForm((s) => ({ ...s, giftDescription: e.target.value }))} />
             <label className="bp-field-label">Тип подарка</label>
             <select value={levelForm.giftType} onChange={(e) => setLevelForm((s) => ({ ...s, giftType: e.target.value }))}>
-              <option value="DRIVECOIN">DriveCoin</option>
+              <option value="DRIVECOIN">Койны (ДрайвКойны)</option>
+              <option value="PROMO_CODE">Промокод</option>
               <option value="TEXT">Текст</option>
             </select>
             {levelForm.giftType === 'DRIVECOIN' ? (
               <>
-                <label className="bp-field-label">Сколько DriveCoin в подарке</label>
+                <label className="bp-field-label">Количество ДрайвКойнов в подарке</label>
                 <input type="number" min="0" value={levelForm.giftDriveCoin} onChange={(e) => setLevelForm((s) => ({ ...s, giftDriveCoin: e.target.value }))} />
+              </>
+            ) : levelForm.giftType === 'PROMO_CODE' ? (
+              <>
+                <label className="bp-field-label">Промокод</label>
+                <input
+                  placeholder="Код, который получит пользователь"
+                  value={levelForm.giftPromoCode}
+                  onChange={(e) => setLevelForm((s) => ({ ...s, giftPromoCode: e.target.value }))}
+                />
               </>
             ) : (
               <>
@@ -261,12 +284,14 @@ export function AdminBattlePassPage({ token, user }) {
                       levelNumber: lvl.level_number,
                       requiredDriveCoin: lvl.required_drive_coin,
                       iconUrl: lvl.icon_url || '',
+                      levelTitle: lvl.title || '',
                       description: lvl.description || '',
                       giftName: lvl.gift_name || '',
                       giftDescription: lvl.gift_description || '',
                       giftType: lvl.gift_type || 'DRIVECOIN',
                       giftDriveCoin: lvl.gift_drive_coin || 0,
                       giftText: lvl.gift_text || '',
+                      giftPromoCode: lvl.gift_promo_code || '',
                     })
                     setEditingLevelId(lvl.id)
                     setActiveTab('levels')
@@ -289,8 +314,22 @@ export function AdminBattlePassPage({ token, user }) {
             <p>Роль: {selectedLevel.role}</p>
             <p>Нужно DriveCoin за сезон: {selectedLevel.required_drive_coin}</p>
             <p>Подарок: {selectedLevel.gift_name || 'Не задан'}</p>
-            <p>Тип подарка: {selectedLevel.gift_type === 'TEXT' ? 'Текст' : 'DriveCoin'}</p>
-            {selectedLevel.gift_type === 'TEXT' ? <p>Текст подарка: {selectedLevel.gift_text || 'Не задан'}</p> : <p>DriveCoin в подарке: {selectedLevel.gift_drive_coin || 0}</p>}
+            <p>Название уровня: {selectedLevel.title || '—'}</p>
+            <p>
+              Тип подарка:{' '}
+              {selectedLevel.gift_type === 'PROMO_CODE'
+                ? 'Промокод'
+                : selectedLevel.gift_type === 'TEXT'
+                  ? 'Текст'
+                  : 'ДрайвКойны'}
+            </p>
+            {selectedLevel.gift_type === 'TEXT' ? (
+              <p>Текст подарка: {selectedLevel.gift_text || 'Не задан'}</p>
+            ) : selectedLevel.gift_type === 'PROMO_CODE' ? (
+              <p>Промокод: {selectedLevel.gift_promo_code || 'Не задан'}</p>
+            ) : (
+              <p>ДрайвКойны в подарке: {selectedLevel.gift_drive_coin || 0}</p>
+            )}
             <p>{selectedLevel.gift_description || 'Без описания подарка'}</p>
             <p>{selectedLevel.description || 'Без описания'}</p>
             <button type="button" onClick={() => setSelectedLevel(null)}>Закрыть</button>

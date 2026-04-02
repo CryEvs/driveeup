@@ -43,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -72,6 +73,7 @@ fun ProfileScreen(
     onChangeAvatar: (String) -> Unit,
     onSaveProfile: (firstName: String, lastName: String, email: String, city: String) -> Unit,
     onOpenMenu: () -> Unit,
+    onOpenAchievements: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -177,6 +179,14 @@ fun ProfileScreen(
                 Text("DriveCoin за все время: ${user.totalDriveCoin}")
             }
         }
+        Text(
+            "Достижения",
+            color = Color(0xFF2F6CC0),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .clickable { onOpenAchievements() }
+        )
         }
         Spacer(Modifier.weight(1f))
         Button(

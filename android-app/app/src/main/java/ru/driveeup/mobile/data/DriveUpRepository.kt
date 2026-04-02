@@ -6,6 +6,7 @@ import org.json.JSONObject
 import ru.driveeup.mobile.domain.DriveUpContent
 import ru.driveeup.mobile.domain.DriveUpNotification
 import ru.driveeup.mobile.domain.DriveUpStoreItem
+import ru.driveeup.mobile.domain.AchievementItem
 import ru.driveeup.mobile.domain.DriveUpTaskItem
 import java.io.BufferedReader
 import java.io.OutputStreamWriter
@@ -38,6 +39,19 @@ class DriveUpRepository {
     suspend fun notifications(token: String): List<DriveUpNotification> = withContext(Dispatchers.IO) {
         val arr = getJsonArray("/driveup/notifications", token)
         (0 until arr.length()).map { parseNotification(arr.getJSONObject(it)) }
+    }
+
+    suspend fun battlePassCurrent(token: String): JSONObject = withContext(Dispatchers.IO) {
+        getJson("/battle-pass/current", token)
+    }
+
+    suspend fun claimBattlePassGift(token: String, levelId: Long): JSONObject = withContext(Dispatchers.IO) {
+        requestJson("POST", "/battle-pass/levels/$levelId/claim-gift", "{}", token)
+    }
+
+    suspend fun achievementsList(token: String): List<AchievementItem> = withContext(Dispatchers.IO) {
+        val arr = getJsonArray("/achievements", token)
+        (0 until arr.length()).map { parseAchievement(arr.getJSONObject(it)) }
     }
 
     private fun getJson(path: String, token: String): JSONObject = requestJson("GET", path, null, token)
@@ -162,6 +176,13 @@ class DriveUpRepository {
         description = json.optString("description"),
         rewardDriveCoin = json.optLong("rewardDriveCoin"),
         sortOrder = json.optInt("sortOrder", 0)
+    )
+
+    private fun parseAchievement(json: JSONObject): AchievementItem = AchievementItem(
+        id = json.optLong("id"),
+        title = json.optString("title"),
+        description = json.optString("description"),
+        iconUrl = json.optString("iconUrl").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) },
     )
 
     private fun parseNotification(json: JSONObject): DriveUpNotification = DriveUpNotification(

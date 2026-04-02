@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AchievementController;
 use App\Http\Controllers\Api\BattlePassController;
 use App\Http\Controllers\Api\DriveupController;
 use App\Http\Controllers\Api\GameRewardController;
@@ -37,6 +38,9 @@ Route::get('/battle-pass/current', [BattlePassController::class, 'current']);
 Route::get('/battle-pass/level-icons/{path}', [BattlePassController::class, 'levelIcon'])->where('path', '.*');
 Route::post('/battle-pass/levels/{level}/claim-gift', [BattlePassController::class, 'claimLevelGift']);
 
+Route::get('/achievements', [AchievementController::class, 'index']);
+Route::get('/achievements/icons/{path}', [AchievementController::class, 'iconFile'])->where('path', '.*');
+
 Route::get('/driveup/content', [DriveupController::class, 'content']);
 Route::get('/driveup/store/items', [DriveupController::class, 'storeItems']);
 Route::post('/driveup/store/items/{item}/purchase', [DriveupController::class, 'purchaseStoreItem'])->whereNumber('item');
@@ -54,6 +58,12 @@ Route::post('/admin/battle-pass/levels/icon', [BattlePassController::class, 'upl
 Route::post('/admin/battle-pass/levels', [BattlePassController::class, 'createLevel']);
 Route::put('/admin/battle-pass/levels/{level}', [BattlePassController::class, 'updateLevel']);
 Route::delete('/admin/battle-pass/levels/{level}', [BattlePassController::class, 'deleteLevel']);
+
+Route::get('/admin/achievements', [AchievementController::class, 'adminList']);
+Route::post('/admin/achievements', [AchievementController::class, 'create']);
+Route::put('/admin/achievements/{achievement}', [AchievementController::class, 'update']);
+Route::delete('/admin/achievements/{achievement}', [AchievementController::class, 'delete']);
+Route::post('/admin/achievements/icon', [AchievementController::class, 'uploadIcon']);
 
 Route::get('/admin/store/items', [DriveupController::class, 'adminStoreItems']);
 Route::post('/admin/store/items', [DriveupController::class, 'adminCreateStoreItem']);

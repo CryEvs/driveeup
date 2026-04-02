@@ -153,7 +153,7 @@ fun DriveUpScreen(
                     shape = RoundedCornerShape(12.dp)) { Text("Игры", fontWeight = FontWeight.SemiBold) }
                 Button(onClick = onOpenBattlePass, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF0F0F0), contentColor = Color(0xFF1D2A08)),
-                    shape = RoundedCornerShape(12.dp)) { Text("Батл-Пасс", fontWeight = FontWeight.SemiBold) }
+                    shape = RoundedCornerShape(12.dp)) { Text("Драйв-Пасс", fontWeight = FontWeight.SemiBold) }
             }
         }
     }
@@ -518,7 +518,7 @@ private fun DarkListBase(
 }
 
 @Composable
-private fun DriveUpTopBar(
+internal fun DriveUpTopBar(
     onBack: () -> Unit,
     onNotifications: () -> Unit,
     dark: Boolean = true

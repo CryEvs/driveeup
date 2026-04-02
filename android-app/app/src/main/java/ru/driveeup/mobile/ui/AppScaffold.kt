@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
 import ru.driveeup.mobile.ui.home.AvatarImage
+import ru.driveeup.mobile.ui.home.AchievementsScreen
 import ru.driveeup.mobile.ui.home.BattlePassScreen
 import ru.driveeup.mobile.domain.UserRole
 import ru.driveeup.mobile.ui.home.CityScreen
@@ -74,7 +75,7 @@ import ru.driveeup.mobile.ui.home.GamesScreen
 import ru.driveeup.mobile.ui.home.ProfileScreen
 
 enum class AppPage {
-    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, DRIVE_UP_LEVELS, DRIVE_UP_STORE_ALL, DRIVE_UP_TASKS_ALL, DRIVE_UP_NOTIFICATIONS, PROFILE, GAMES, BATTLE_PASS
+    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, DRIVE_UP_LEVELS, DRIVE_UP_STORE_ALL, DRIVE_UP_TASKS_ALL, DRIVE_UP_NOTIFICATIONS, PROFILE, GAMES, BATTLE_PASS, ACHIEVEMENTS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -290,6 +291,7 @@ private fun AppContent(
                         onChangeAvatar = onChangeAvatar,
                         onSaveProfile = onSaveProfile,
                         onOpenMenu = { scope.launch { drawerState.open() } },
+                        onOpenAchievements = { page = AppPage.ACHIEVEMENTS },
                         onLogout = onLogout
                     )
                     AppPage.DRIVE_UP -> DriveUpScreen(
@@ -336,7 +338,15 @@ private fun AppContent(
                     )
                     AppPage.BATTLE_PASS -> BattlePassScreen(
                         token = state.token,
-                        onBack = { page = AppPage.DRIVE_UP }
+                        onBack = { page = AppPage.DRIVE_UP },
+                        onMenuBack = { scope.launch { drawerState.open() } },
+                        onNotifications = { page = AppPage.DRIVE_UP_NOTIFICATIONS }
+                    )
+                    AppPage.ACHIEVEMENTS -> AchievementsScreen(
+                        token = state.token,
+                        onBack = { page = AppPage.PROFILE },
+                        onMenuBack = { scope.launch { drawerState.open() } },
+                        onNotifications = { page = AppPage.DRIVE_UP_NOTIFICATIONS }
                     )
                     AppPage.HISTORY -> PlaceholderScreen("История заказов", onOpenMenu = { scope.launch { drawerState.open() } })
                     AppPage.INTERCITY -> PlaceholderScreen("Межгород", onOpenMenu = { scope.launch { drawerState.open() } })

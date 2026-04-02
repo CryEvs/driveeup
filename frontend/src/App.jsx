@@ -3,6 +3,8 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate 
 import { CrossyGamePage } from './pages/CrossyGamePage'
 import { GamesPage } from './pages/GamesPage'
 import { BattlePassPage } from './pages/BattlePassPage.jsx'
+import { AchievementsPage } from './pages/AchievementsPage.jsx'
+import { AdminAchievementsPage } from './pages/AdminAchievementsPage.jsx'
 import { AdminBattlePassPage } from './pages/AdminBattlePassPage.jsx'
 import { AdminPanelPage } from './pages/AdminPanelPage.jsx'
 import { AdminUsersPage } from './pages/AdminUsersPage.jsx'
@@ -116,7 +118,8 @@ function Sidebar({ user, userLoading, theme, setTheme, onLogout }) {
           <Link to="/">Главная</Link>
           <Link to="/profile">Профиль</Link>
           <Link to="/games">Игры</Link>
-          <Link to="/battle-pass">Батл-Пасс</Link>
+          <Link to="/battle-pass">Драйв-Пасс</Link>
+          <Link to="/achievements">Достижения</Link>
           {user?.isAdmin && <Link to="/admin">Админ панель</Link>}
         </nav>
         <div className="coins">
@@ -203,6 +206,9 @@ function ProfilePage({ token, user, setUser }) {
           <p>Роль: {user?.role}</p>
           <p>DriveCoin: {user?.driveCoin ?? user?.driveeCoin ?? 0}</p>
           <p>DriveCoin за все время: {user?.totalDriveCoin ?? 0}</p>
+          <p>
+            <Link to="/achievements">Достижения</Link>
+          </p>
           <label className="upload-label">
             Изменить аватарку
             <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} />
@@ -239,7 +245,9 @@ function Dashboard({ auth }) {
           <Route path="/profile" element={<ProfilePage token={auth.token} user={auth.user} setUser={auth.setUser} />} />
           <Route path="/games" element={<GamesPage />} />
           <Route path="/battle-pass" element={<BattlePassPage token={auth.token} user={auth.user} />} />
+          <Route path="/achievements" element={<AchievementsPage token={auth.token} />} />
           <Route path="/admin/battle-pass" element={<AdminBattlePassPage token={auth.token} user={auth.user} />} />
+          <Route path="/admin/achievements" element={<AdminAchievementsPage token={auth.token} user={auth.user} />} />
           <Route path="/admin" element={<AdminPanelPage token={auth.token} user={auth.user} />} />
           <Route path="/admin/users" element={<AdminUsersPage user={auth.user} />} />
           <Route path="/admin/rides" element={<AdminRidesPage user={auth.user} />} />

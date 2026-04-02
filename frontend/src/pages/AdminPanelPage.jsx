@@ -40,9 +40,14 @@ export function AdminPanelPage({ token, user }) {
 
       <div className="admin-panel-grid" style={{ marginTop: 18 }}>
         <AdminCard
-          title="Батл-Пасс"
+          title="Драйв-Пасс"
           to="/admin/battle-pass"
           description="Сезоны, уровни и подарки."
+        />
+        <AdminCard
+          title="Достижения"
+          to="/admin/achievements"
+          description="Иконки, названия и описания для экрана достижений."
         />
         <AdminCard
           title="Пользователи"
