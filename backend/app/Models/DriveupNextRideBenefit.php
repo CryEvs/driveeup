@@ -13,6 +13,7 @@ class DriveupNextRideBenefit extends Model
         'tier',
         'benefit_text',
         'level_description',
+        'rides_required_total',
         'updated_by_user_id',
     ];
 

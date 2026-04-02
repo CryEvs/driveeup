@@ -13,6 +13,7 @@ use Illuminate\Notifications\Notifiable;
 #[Fillable([
     'name', 'email', 'password', 'role', 'is_admin', 'drivee_coin', 'total_drive_coin', 'premium', 'api_token', 'avatar_url',
     'first_name', 'last_name', 'city', 'rating_avg', 'rides_count', 'vehicle_model', 'vehicle_plate',
+    'next_ride_store_item_name',
 ])]
 #[Hidden(['password', 'remember_token', 'api_token'])]
 class User extends Authenticatable

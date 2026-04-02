@@ -30,6 +30,10 @@ class DriveUpRepository {
         (0 until arr.length()).map { parseTask(arr.getJSONObject(it)) }
     }
 
+    suspend fun purchaseStoreItem(token: String, itemId: Long): JSONObject = withContext(Dispatchers.IO) {
+        requestJson("POST", "/driveup/store/items/$itemId/purchase", "{}", token)
+    }
+
     private fun getJson(path: String, token: String): JSONObject = requestJson("GET", path, null, token)
     private fun getJsonArray(path: String, token: String): org.json.JSONArray = requestJsonArray("GET", path, null, token)
 
@@ -93,6 +97,7 @@ class DriveUpRepository {
         val itemsArr = json.optJSONArray("storeItems") ?: JSONArray()
         val tasksArr = json.optJSONArray("tasks") ?: JSONArray()
         val descriptionsObj = json.optJSONObject("loyaltyLevelDescriptions") ?: JSONObject()
+        val thresholdsObj = json.optJSONObject("loyaltyRidesThresholds") ?: JSONObject()
         val items = (0 until itemsArr.length()).map { parseStoreItem(itemsArr.getJSONObject(it)) }
         val tasks = (0 until tasksArr.length()).map { parseTask(tasksArr.getJSONObject(it)) }
         return DriveUpContent(
@@ -100,7 +105,9 @@ class DriveUpRepository {
             driveCoin = json.optLong("driveCoin", 0L),
             ridesCount = json.optLong("ridesCount", 0L),
             nextRideBenefitForTier = json.optString("nextRideBenefitForTier", ""),
+            nextRideStoreItemName = json.optString("nextRideStoreItemName").ifBlank { null },
             loyaltyLevelDescriptions = parseStringMap(descriptionsObj),
+            loyaltyRidesThresholds = parseLongMap(thresholdsObj),
             storeItems = items,
             tasks = tasks
         )
@@ -112,6 +119,16 @@ class DriveUpRepository {
         while (keys.hasNext()) {
             val key = keys.next()
             result[key] = json.optString(key, "")
+        }
+        return result
+    }
+
+    private fun parseLongMap(json: JSONObject): Map<String, Long> {
+        val result = linkedMapOf<String, Long>()
+        val keys = json.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            result[key] = json.optLong(key, 0L)
         }
         return result
     }

@@ -16,6 +16,10 @@ export function AdminLoyaltyPage({ token, user }) {
     SILVER: 'Серебряный уровень: больше бонусов и улучшенные условия.',
     GOLD: 'Золотой уровень: максимальные привилегии и лучшие условия сервиса.',
   })
+  const [ridesThresholds, setRidesThresholds] = useState({
+    SILVER: 15,
+    GOLD: 50,
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -42,12 +46,17 @@ export function AdminLoyaltyPage({ token, user }) {
       const rows = await api('/admin/loyalty/next-ride-benefits')
       const map = { ...benefits }
       const descriptionsMap = { ...descriptions }
+      const thresholdMap = { ...ridesThresholds }
       ;(rows || []).forEach((r) => {
         if (r?.tier) map[r.tier] = r.benefit_text || ''
         if (r?.tier) descriptionsMap[r.tier] = r.level_description || descriptionsMap[r.tier] || ''
+        if (r?.tier === 'SILVER' || r?.tier === 'GOLD') {
+          thresholdMap[r.tier] = Number(r.rides_required_total || thresholdMap[r.tier] || 0)
+        }
       })
       setBenefits(map)
       setDescriptions(descriptionsMap)
+      setRidesThresholds(thresholdMap)
     } catch (e) {
       setError(e.message || 'Ошибка загрузки')
     } finally {
@@ -66,6 +75,7 @@ export function AdminLoyaltyPage({ token, user }) {
         tier,
         benefitText: benefits[tier] || '',
         levelDescription: descriptions[tier] || '',
+        ridesRequiredTotal: tier === 'SILVER' || tier === 'GOLD' ? Number(ridesThresholds[tier] || 0) : null,
       })
       await load()
     } catch (e) {
@@ -91,6 +101,17 @@ export function AdminLoyaltyPage({ token, user }) {
               value={descriptions[tier] || ''}
               onChange={(e) => setDescriptions((s) => ({ ...s, [tier]: e.target.value }))}
             />
+            {tier === 'SILVER' || tier === 'GOLD' ? (
+              <>
+                <label className="bp-field-label">Поездок для получения уровня</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={ridesThresholds[tier] || 0}
+                  onChange={(e) => setRidesThresholds((s) => ({ ...s, [tier]: e.target.value }))}
+                />
+              </>
+            ) : null}
             <label className="bp-field-label">Что применится к следующей поездке</label>
             <textarea
               value={benefits[tier] || ''}

@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.launch
 import ru.driveeup.mobile.R
 import ru.driveeup.mobile.data.DriveUpRepository
 import ru.driveeup.mobile.domain.DriveUpContent
@@ -76,6 +78,7 @@ fun DriveUpScreen(
     onNotifications: () -> Unit = {}
 ) {
     val repo = remember { DriveUpRepository() }
+    val scope = rememberCoroutineScope()
     var content by remember { mutableStateOf<DriveUpContent?>(null) }
     var loading by remember { mutableStateOf(true) }
     var selectedItem by remember { mutableStateOf<DriveUpStoreItem?>(null) }
@@ -91,8 +94,12 @@ fun DriveUpScreen(
     val items = content?.storeItems ?: emptyList()
     val tasks = content?.tasks ?: emptyList()
     val rides = content?.ridesCount ?: user.ridesCount
-    val tier = loyaltyTierFromRides(rides)
-    val nextRideBenefit = content?.nextRideBenefitForTier?.takeIf { it.isNotBlank() } ?: loyaltyTierRideBenefit(tier)
+    val ridesForSilver = (content?.loyaltyRidesThresholds?.get("SILVER") ?: 15L).coerceAtLeast(1L)
+    val ridesForGold = (content?.loyaltyRidesThresholds?.get("GOLD") ?: 50L).coerceAtLeast(ridesForSilver + 1L)
+    val tier = parseTier(content?.loyaltyTier) ?: loyaltyTierFromRides(rides)
+    val nextRideBenefit = content?.nextRideStoreItemName?.takeIf { it.isNotBlank() }
+        ?: content?.nextRideBenefitForTier?.takeIf { it.isNotBlank() }
+        ?: loyaltyTierRideBenefit(tier)
 
     Column(Modifier.fillMaxSize().background(Color.White)) {
         DriveUpTopBar(onBack = onOpenMenu, onNotifications = onNotifications)
@@ -106,7 +113,12 @@ fun DriveUpScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(Modifier.fillMaxWidth().clickable(onClick = onOpenLoyaltyLevels)) {
-                    DriveUpLoyaltySection(tier = tier, ridesCount = rides)
+                    DriveUpLoyaltySection(
+                        tier = tier,
+                        ridesCount = rides,
+                        ridesForSilver = ridesForSilver,
+                        ridesForGold = ridesForGold
+                    )
                 }
                 Text("К следующей поездке применится:", color = Color(0xFF1D2A08), fontWeight = FontWeight.Medium, fontSize = 14.sp)
                 NextRideBenefitCard(nextRideBenefit)
@@ -139,7 +151,16 @@ fun DriveUpScreen(
         StoreItemDialog(
             item = selectedItem!!,
             onDismiss = { selectedItem = null },
-            onBuy = { selectedItem = null /* TODO purchase API */ }
+            onBuy = {
+                val buyItem = selectedItem ?: return@StoreItemDialog
+                selectedItem = null
+                loading = true
+                scope.launch {
+                    runCatching { repo.purchaseStoreItem(token, buyItem.id) }
+                    content = runCatching { repo.content(token) }.getOrNull() ?: content
+                    loading = false
+                }
+            }
         )
     }
 }
@@ -156,7 +177,9 @@ fun DriveUpLoyaltyLevelsScreen(
     var content by remember { mutableStateOf<DriveUpContent?>(null) }
     var selectedTier by remember { mutableStateOf("BRONZE") }
     val rides = content?.ridesCount ?: user.ridesCount
-    val currentTier = loyaltyTierFromRides(rides)
+    val ridesForSilver = (content?.loyaltyRidesThresholds?.get("SILVER") ?: 15L).coerceAtLeast(1L)
+    val ridesForGold = (content?.loyaltyRidesThresholds?.get("GOLD") ?: 50L).coerceAtLeast(ridesForSilver + 1L)
+    val currentTier = parseTier(content?.loyaltyTier) ?: loyaltyTierFromRides(rides)
     val descriptions = content?.loyaltyLevelDescriptions ?: mapOf(
         "BRONZE" to "Бронзовый уровень: стартовые привилегии и базовые преимущества.",
         "SILVER" to "Серебряный уровень: больше бонусов и улучшенные условия.",
@@ -186,7 +209,12 @@ fun DriveUpLoyaltyLevelsScreen(
                 Text("Система уровней", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
             Column(modifier = Modifier.padding(horizontal = 12.dp)) {
-                DriveUpLoyaltySection(tier = currentTier, ridesCount = rides)
+                DriveUpLoyaltySection(
+                    tier = currentTier,
+                    ridesCount = rides,
+                    ridesForSilver = ridesForSilver,
+                    ridesForGold = ridesForGold
+                )
             }
         }
 
@@ -289,7 +317,22 @@ fun DriveUpStoreAllScreen(
     }
 
     if (selectedItem != null) {
-        StoreItemDialog(item = selectedItem!!, onDismiss = { selectedItem = null }, onBuy = { selectedItem = null })
+        StoreItemDialog(
+            item = selectedItem!!,
+            onDismiss = { selectedItem = null },
+            onBuy = {
+                val buyItem = selectedItem ?: return@StoreItemDialog
+                selectedItem = null
+                loading = true
+                scope.launch {
+                    runCatching { repo.purchaseStoreItem(token, buyItem.id) }
+                    val fresh = runCatching { repo.content(token) }.getOrNull()
+                    items = fresh?.storeItems ?: items
+                    coin = fresh?.driveCoin ?: coin
+                    loading = false
+                }
+            }
+        )
     }
 }
 
@@ -411,10 +454,23 @@ private fun HeroSection(displayName: String, driveCoin: Long) {
 }
 
 @Composable
-private fun DriveUpLoyaltySection(tier: LoyaltyTier, ridesCount: Long) {
-    val remaining = ridesUntilNextTier(ridesCount)
-    val p1 = progressBronzeToSilverBar(ridesCount)
-    val p2 = progressSilverToGoldBar(ridesCount)
+private fun DriveUpLoyaltySection(
+    tier: LoyaltyTier,
+    ridesCount: Long,
+    ridesForSilver: Long,
+    ridesForGold: Long
+) {
+    val remaining = when {
+        ridesCount < ridesForSilver -> ridesForSilver - ridesCount
+        ridesCount < ridesForGold -> ridesForGold - ridesCount
+        else -> null
+    }
+    val p1 = (ridesCount.toFloat() / ridesForSilver.toFloat()).coerceIn(0f, 1f)
+    val p2 = when {
+        ridesCount <= ridesForSilver -> 0f
+        ridesCount >= ridesForGold -> 1f
+        else -> ((ridesCount - ridesForSilver).toFloat() / (ridesForGold - ridesForSilver).toFloat()).coerceIn(0f, 1f)
+    }
     Box(Modifier.fillMaxWidth()) {
         Image(painterResource(R.drawable.loality_bg), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -442,6 +498,13 @@ private fun DriveUpLoyaltySection(tier: LoyaltyTier, ridesCount: Long) {
             }
         }
     }
+}
+
+private fun parseTier(raw: String?): LoyaltyTier? = when (raw) {
+    "BRONZE" -> LoyaltyTier.BRONZE
+    "SILVER" -> LoyaltyTier.SILVER
+    "GOLD" -> LoyaltyTier.GOLD
+    else -> null
 }
 
 @Composable

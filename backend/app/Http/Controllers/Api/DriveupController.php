@@ -23,7 +23,8 @@ class DriveupController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $tier = $this->loyaltyTierByRides((int) $user->rides_count);
+        $thresholds = $this->ridesThresholdsMap();
+        $tier = $this->loyaltyTierByRides((int) $user->rides_count, $thresholds);
         $items = $this->storeItemsForTier($tier);
         $tasks = $this->activeTasks();
         $benefits = $this->benefitsMap();
@@ -37,7 +38,9 @@ class DriveupController extends Controller
             'tasks' => $tasks,
             'nextRideBenefits' => $benefits,
             'nextRideBenefitForTier' => $benefits[$tier] ?? '',
+            'nextRideStoreItemName' => $user->next_ride_store_item_name,
             'loyaltyLevelDescriptions' => $descriptions,
+            'loyaltyRidesThresholds' => $thresholds,
         ]);
     }
 
@@ -47,7 +50,8 @@ class DriveupController extends Controller
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-        $tier = $this->loyaltyTierByRides((int) $user->rides_count);
+        $thresholds = $this->ridesThresholdsMap();
+        $tier = $this->loyaltyTierByRides((int) $user->rides_count, $thresholds);
         return response()->json($this->storeItemsForTier($tier));
     }
 
@@ -66,12 +70,14 @@ class DriveupController extends Controller
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-        $tier = $this->loyaltyTierByRides((int) $user->rides_count);
+        $thresholds = $this->ridesThresholdsMap();
+        $tier = $this->loyaltyTierByRides((int) $user->rides_count, $thresholds);
         $map = $this->benefitsMap();
         return response()->json([
             'loyaltyTier' => $tier,
             'benefits' => $map,
             'current' => $map[$tier] ?? '',
+            'ridesThresholds' => $thresholds,
         ]);
     }
 
@@ -84,7 +90,8 @@ class DriveupController extends Controller
         if (! $item->is_active) {
             return response()->json(['error' => 'Item is inactive'], 422);
         }
-        $tier = $this->loyaltyTierByRides((int) $user->rides_count);
+        $thresholds = $this->ridesThresholdsMap();
+        $tier = $this->loyaltyTierByRides((int) $user->rides_count, $thresholds);
         if (! $this->isItemAllowedForTier((string) $item->allowed_tier, $tier)) {
             return response()->json(['error' => 'Item is not available for your loyalty tier'], 403);
         }
@@ -93,12 +100,14 @@ class DriveupController extends Controller
             return response()->json(['error' => 'Not enough DriveCoin'], 422);
         }
         $user->drivee_coin = (int) $user->drivee_coin - $price;
+        $user->next_ride_store_item_name = $item->name;
         $user->save();
 
         return response()->json([
             'ok' => true,
             'driveCoin' => (int) $user->drivee_coin,
             'purchasedItemId' => $item->id,
+            'nextRideStoreItemName' => $user->next_ride_store_item_name,
         ]);
     }
 
@@ -315,10 +324,14 @@ class DriveupController extends Controller
             'tier' => ['required', Rule::in(['BRONZE', 'SILVER', 'GOLD'])],
             'benefitText' => ['required', 'string', 'max:2000000'],
             'levelDescription' => ['nullable', 'string', 'max:2000000'],
+            'ridesRequiredTotal' => ['nullable', 'integer', 'min:0'],
         ]);
         $row = DriveupNextRideBenefit::query()->firstOrNew(['tier' => $v['tier']]);
         $row->benefit_text = $v['benefitText'];
         $row->level_description = $v['levelDescription'] ?? null;
+        $row->rides_required_total = in_array($v['tier'], ['SILVER', 'GOLD'], true)
+            ? ($v['ridesRequiredTotal'] ?? null)
+            : null;
         $row->updated_by_user_id = $admin->id;
         $row->save();
         return response()->json($row);
@@ -396,11 +409,33 @@ class DriveupController extends Controller
         return $map;
     }
 
-    private function loyaltyTierByRides(int $ridesCount): string
+    private function ridesThresholdsMap(): array
     {
+        $rows = DriveupNextRideBenefit::query()
+            ->whereIn('tier', ['SILVER', 'GOLD'])
+            ->get()
+            ->keyBy('tier');
+
+        $silver = (int) ($rows['SILVER']->rides_required_total ?? self::RIDES_FOR_SILVER);
+        $gold = (int) ($rows['GOLD']->rides_required_total ?? self::RIDES_FOR_GOLD);
+
+        $silver = max(1, $silver);
+        $gold = max($silver + 1, $gold);
+
+        return [
+            'SILVER' => $silver,
+            'GOLD' => $gold,
+        ];
+    }
+
+    private function loyaltyTierByRides(int $ridesCount, ?array $thresholds = null): string
+    {
+        $thresholds = $thresholds ?: $this->ridesThresholdsMap();
+        $silver = (int) ($thresholds['SILVER'] ?? self::RIDES_FOR_SILVER);
+        $gold = (int) ($thresholds['GOLD'] ?? self::RIDES_FOR_GOLD);
         return match (true) {
-            $ridesCount >= self::RIDES_FOR_GOLD => 'GOLD',
-            $ridesCount >= self::RIDES_FOR_SILVER => 'SILVER',
+            $ridesCount >= $gold => 'GOLD',
+            $ridesCount >= $silver => 'SILVER',
             default => 'BRONZE',
         };
     }

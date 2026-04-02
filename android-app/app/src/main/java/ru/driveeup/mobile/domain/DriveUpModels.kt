@@ -27,7 +27,9 @@ data class DriveUpContent(
     val driveCoin: Long,
     val ridesCount: Long,
     val nextRideBenefitForTier: String,
+    val nextRideStoreItemName: String?,
     val loyaltyLevelDescriptions: Map<String, String>,
+    val loyaltyRidesThresholds: Map<String, Long>,
     val storeItems: List<DriveUpStoreItem>,
     val tasks: List<DriveUpTaskItem>
 )
