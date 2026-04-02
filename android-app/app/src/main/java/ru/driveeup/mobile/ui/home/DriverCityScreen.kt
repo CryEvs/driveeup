@@ -284,7 +284,15 @@ fun DriverCityScreen(
                                     modifier = Modifier.size(48.dp),
                                     shape = CircleShape,
                                     color = Color(0xFFEAEAEA)
-                                ) {}
+                                ) {
+                                    RideUserAvatar(
+                                        avatarUrl = p?.avatarUrl,
+                                        contentDescription = "Пассажир",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape)
+                                    )
+                                }
                                 Text(p?.firstName ?: "—", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text("★ ${p?.ratingAvg ?: 5.0} (${p?.ridesCount ?: 0})", fontSize = 11.sp, color = Color(0xFFFFC107))
                             }
@@ -604,7 +612,15 @@ private fun DriverFeedTab(
                         modifier = Modifier.size(44.dp),
                         shape = CircleShape,
                         color = Color(0xFFEAEAEA)
-                    ) {}
+                    ) {
+                        RideUserAvatar(
+                            avatarUrl = item.passenger?.avatarUrl,
+                            contentDescription = "Пассажир",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    }
                     Text(item.passenger?.firstName ?: "—", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("★ ${item.passenger?.ratingAvg ?: 5.0} (${item.passenger?.ridesCount ?: 0})", fontSize = 11.sp, color = Color(0xFFFFC107))
                     Text("Только что", fontSize = 11.sp, color = Color(0xFF8A8A8A))

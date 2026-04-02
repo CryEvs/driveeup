@@ -6,7 +6,6 @@ import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,28 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.driveeup.mobile.domain.User
-
-private const val PLACEHOLDER = "https://placehold.co/120x120?text=Avatar"
-
-private fun decodeDataUriToBitmap(dataUri: String): Bitmap? {
-    if (!dataUri.startsWith("data:")) return null
-    val comma = dataUri.indexOf(',')
-    if (comma < 0) return null
-    val payload = dataUri.substring(comma + 1)
-    return runCatching {
-        val bytes = Base64.decode(payload, Base64.DEFAULT)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    }.getOrNull()
-}
 
 private fun uriToDataUrl(context: android.content.Context, uri: Uri): String? {
     val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
@@ -81,23 +64,6 @@ private fun uriToDataUrl(context: android.content.Context, uri: Uri): String? {
     val out = java.io.ByteArrayOutputStream()
     resized.compress(Bitmap.CompressFormat.JPEG, 90, out)
     return "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
-}
-
-@Composable
-private fun ProfileAvatar(avatarUrl: String?, modifier: Modifier = Modifier) {
-    val model = avatarUrl?.takeIf { it.isNotBlank() }
-    when {
-        model == null -> AsyncImage(model = PLACEHOLDER, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = modifier)
-        model.startsWith("data:") -> {
-            val bitmap = remember(model) { decodeDataUriToBitmap(model) }
-            if (bitmap != null) {
-                Image(bitmap = bitmap.asImageBitmap(), contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = modifier)
-            } else {
-                AsyncImage(model = PLACEHOLDER, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = modifier)
-            }
-        }
-        else -> AsyncImage(model = model, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = modifier)
-    }
 }
 
 @Composable
@@ -167,8 +133,9 @@ fun ProfileScreen(
         Spacer(Modifier.height(10.dp))
         Divider(color = Color(0xFFD8D8D8))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
-            ProfileAvatar(
+            AvatarImage(
                 avatarUrl = user.avatarUrl,
+                contentDescription = "Аватар",
                 modifier = Modifier
                     .size(120.dp)
                     .clip(CircleShape)

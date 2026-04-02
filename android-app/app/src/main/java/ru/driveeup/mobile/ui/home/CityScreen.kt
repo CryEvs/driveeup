@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -137,6 +138,8 @@ fun CityScreen(
     val locationOverlayRef = remember { mutableStateOf<MyLocationNewOverlay?>(null) }
 
     var activeRide by remember { mutableStateOf<RideOrder?>(null) }
+    /** Первый ответ /rides/passenger/active получен — не крутим загрузку «есть ли заказ». */
+    var ridePollReady by remember { mutableStateOf(false) }
     var rateStars by remember { mutableStateOf(0) }
     var orderingBusy by remember { mutableStateOf(false) }
     /** После «Отмена» в оценке не показываем снова, пока придёт другая поездка. */
@@ -285,7 +288,14 @@ fun CityScreen(
     }
 
     LaunchedEffect(token, user.role) {
-        if (token.isBlank() || user.role != UserRole.PASSENGER) return@LaunchedEffect
+        if (token.isBlank() || user.role != UserRole.PASSENGER) {
+            ridePollReady = true
+            return@LaunchedEffect
+        }
+        runCatching {
+            activeRide = rideRepo.passengerActive(token)
+        }
+        ridePollReady = true
         while (true) {
             delay(3000)
             runCatching {
@@ -306,6 +316,8 @@ fun CityScreen(
         activeRideSnapshot.status in listOf("searching", "accepted", "at_pickup", "in_trip") ||
             needsPassengerRating
         )
+
+    val showRideLoading = user.role == UserRole.PASSENGER && token.isNotBlank() && !ridePollReady
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
@@ -657,6 +669,7 @@ fun CityScreen(
                     if ((ride.driverRating == null) && ride.driver != null && ride.id != dismissedRatingRideId) {
                         PassengerRateFullScreen(
                             driverName = ride.driver.firstName.ifBlank { ride.driver.email },
+                            driverAvatarUrl = ride.driver.avatarUrl,
                             selectedStars = rateStars,
                             onStar = { rateStars = it },
                             onDone = {
@@ -678,6 +691,17 @@ fun CityScreen(
                         )
                     }
                 }
+            }
+        }
+
+        if (showRideLoading) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0x33000000)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = BrandGreen)
             }
         }
 

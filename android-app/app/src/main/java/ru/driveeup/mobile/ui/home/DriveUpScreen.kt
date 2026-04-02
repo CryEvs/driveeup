@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.R
 import ru.driveeup.mobile.data.DriveUpRepository
@@ -91,9 +92,14 @@ fun DriveUpScreen(
     val displayName = user.firstName.takeIf { it.isNotBlank() } ?: user.email.substringBefore("@").ifBlank { "друг" }
 
     LaunchedEffect(token) {
+        if (token.isBlank()) return@LaunchedEffect
         loading = true
         content = runCatching { repo.content(token) }.getOrNull()
         loading = false
+        while (true) {
+            delay(10000)
+            runCatching { repo.content(token) }.getOrNull()?.let { content = it }
+        }
     }
 
     val currentCoin = content?.driveCoin ?: user.driveCoin

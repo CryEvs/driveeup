@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\RideOrder;
 use App\Models\RideOrderSkip;
 use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -401,7 +402,62 @@ class RideController extends Controller
         $ride->status = $newStatus;
         $ride->save();
 
+        if ($newStatus === 'completed') {
+            $this->accruePassengerRideCoins($ride->fresh(['passenger']));
+        }
+
         return response()->json($this->transformRide($ride->fresh(['passenger', 'driver'])));
+    }
+
+    /**
+     * Начисление DriveCoin пассажиру: стоимость поездки × 0.1 × коэффициент рейтинга.
+     * Коэффициент: ≥4.95 → 1; <4.1 → 0.1; (4.1; 4.9] линейно 0.1…0.9; (4.9; 4.95) → 0.9…1.0.
+     */
+    private function accruePassengerRideCoins(RideOrder $ride): void
+    {
+        $passenger = $ride->passenger;
+        if (! $passenger) {
+            return;
+        }
+
+        $priceRub = (float) ($ride->agreed_price_rub ?? $ride->price_rub);
+        $coeff = $this->passengerRideRatingCoefficient((float) $passenger->rating_avg);
+        $amount = round($priceRub * 0.1 * $coeff, 2);
+        if ($amount <= 0) {
+            return;
+        }
+
+        $passenger->drivee_coin = round((float) $passenger->drivee_coin + $amount, 2);
+        $passenger->total_drive_coin = round((float) $passenger->total_drive_coin + $amount, 2);
+        $passenger->save();
+
+        $amountStr = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
+        $coeffStr = rtrim(rtrim(number_format($coeff, 2, '.', ''), '0'), '.');
+        $ratingStr = number_format((float) $passenger->rating_avg, 2, '.', '');
+
+        UserNotification::create([
+            'user_id' => $passenger->id,
+            'type' => 'DRIVECOIN_ACCRUAL',
+            'title' => 'Начисление ДрайвКойнов',
+            'body' => 'Начисление койнов за поездку: '.$amountStr
+                .' (поездка '.(int) round($priceRub).' ₽, ваш рейтинг '.$ratingStr.', коэффициент '.$coeffStr.')',
+        ]);
+    }
+
+    private function passengerRideRatingCoefficient(float $rating): float
+    {
+        $r = max(0.0, min(5.0, $rating));
+        if ($r >= 4.95) {
+            return 1.0;
+        }
+        if ($r < 4.1) {
+            return 0.1;
+        }
+        if ($r <= 4.9) {
+            return max(0.1, min(0.9, ($r - 4.1) + 0.1));
+        }
+
+        return 0.9 + ($r - 4.9) / (4.95 - 4.9) * 0.1;
     }
 
     private function applyRating(User $ratedUser, int $stars): void

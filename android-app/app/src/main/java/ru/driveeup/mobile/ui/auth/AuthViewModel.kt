@@ -18,7 +18,9 @@ data class AuthUiState(
     val darkTheme: Boolean = false,
     val registerMode: Boolean = false,
     /** Пока выполняется первичная проверка токена (/auth/me). */
-    val sessionChecking: Boolean = true
+    val sessionChecking: Boolean = true,
+    /** Одноразово после успешного сохранения профиля — показать snackbar и открыть меню. */
+    val profileSaved: Boolean = false
 )
 
 class AuthViewModel(
@@ -153,13 +155,31 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true, error = null)
             runCatching { repo.updateProfile(token, firstName, lastName, email, city) }
-                .onSuccess { user -> _uiState.value = _uiState.value.copy(loading = false, user = user, error = null) }
+                .onSuccess { user ->
+                    _uiState.value = _uiState.value.copy(
+                        loading = false,
+                        user = user,
+                        error = null,
+                        profileSaved = true
+                    )
+                }
                 .onFailure { _uiState.value = _uiState.value.copy(loading = false, error = it.message ?: "Ошибка сохранения профиля") }
         }
     }
 
+    fun consumeProfileSaved() {
+        _uiState.value = _uiState.value.copy(profileSaved = false)
+    }
+
     fun logout() {
-        _uiState.value = _uiState.value.copy(token = "", user = null, error = null, registerMode = false, sessionChecking = false)
+        _uiState.value = _uiState.value.copy(
+            token = "",
+            user = null,
+            error = null,
+            registerMode = false,
+            sessionChecking = false,
+            profileSaved = false
+        )
     }
 
     fun clearError() {

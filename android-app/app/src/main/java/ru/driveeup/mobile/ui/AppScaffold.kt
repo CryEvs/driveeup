@@ -34,6 +34,8 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -54,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Typography
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
@@ -123,7 +126,8 @@ fun DriveeUpAppScaffold() {
                         onChangeAvatar = { vm.updateAvatar(it) },
                         onSaveProfile = { firstName, lastName, email, city ->
                             vm.updateProfile(firstName, lastName, email, city)
-                        }
+                        },
+                        onConsumeProfileSaved = { vm.consumeProfileSaved() }
                     )
                 }
             }
@@ -139,12 +143,32 @@ private fun AppContent(
     onToggleTheme: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onChangeAvatar: (String) -> Unit,
-    onSaveProfile: (String, String, String, String) -> Unit
+    onSaveProfile: (String, String, String, String) -> Unit,
+    onConsumeProfileSaved: () -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var page by remember { mutableStateOf(AppPage.CITY) }
     val drawerBg = Color.White
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.profileSaved) {
+        if (state.profileSaved) {
+            page = AppPage.CITY
+            snackbarHostState.showSnackbar("Изменения успешно применены")
+            scope.launch { drawerState.open() }
+            onConsumeProfileSaved()
+        }
+    }
+
+    LaunchedEffect(state.token) {
+        val t = state.token
+        if (t.isBlank()) return@LaunchedEffect
+        while (true) {
+            delay(8000)
+            vm.refreshMe(t)
+        }
+    }
 
     /** Интерфейс водителя / пассажира берём из роли аккаунта на сервере, а не из локального prefs. */
     val isDriverUi = state.user?.role == UserRole.DRIVER
@@ -226,7 +250,8 @@ private fun AppContent(
         }
     ) {
         Scaffold(
-            containerColor = Color.White
+            containerColor = Color.White,
+            snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { padding ->
             Surface(
                 modifier = Modifier.fillMaxSize().padding(padding),

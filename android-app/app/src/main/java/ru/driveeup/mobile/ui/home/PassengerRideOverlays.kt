@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -211,7 +212,19 @@ fun PassengerDriverInfoSheet(
             )
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(48.dp)) {}
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFEAEAEA),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    RideUserAvatar(
+                        avatarUrl = d.avatarUrl,
+                        contentDescription = "Водитель",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                }
                 Column(Modifier.padding(start = 12.dp)) {
                     Text(d.firstName.ifBlank { d.email }, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -231,6 +244,7 @@ fun PassengerDriverInfoSheet(
 @Composable
 fun PassengerRateFullScreen(
     driverName: String,
+    driverAvatarUrl: String?,
     selectedStars: Int,
     onStar: (Int) -> Unit,
     onDone: () -> Unit,
@@ -245,7 +259,15 @@ fun PassengerRateFullScreen(
         ) {
             Text("Оцените заказ", fontWeight = FontWeight.Bold, fontSize = 22.sp)
             Spacer(Modifier.height(24.dp))
-            Surface(shape = CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(72.dp)) {}
+            Surface(shape = CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(72.dp)) {
+                RideUserAvatar(
+                    avatarUrl = driverAvatarUrl,
+                    contentDescription = "Водитель",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            }
             Spacer(Modifier.height(12.dp))
             Text(driverName, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(20.dp))
