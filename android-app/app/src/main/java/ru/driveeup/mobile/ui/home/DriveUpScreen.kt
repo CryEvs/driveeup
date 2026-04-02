@@ -2,7 +2,7 @@ package ru.driveeup.mobile.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border.BorderStroke
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -622,15 +622,21 @@ private fun DriveUpTasksSection(
 
 @Composable
 private fun LoyaltyTaskCard(task: LoyaltyTaskItem) {
-    Card(
+    Surface(
         modifier = Modifier
             .width(185.dp)
             .height(200.dp),
         shape = RoundedCornerShape(BrandCornerRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        border = BorderStroke(2.dp, BrandGreen)
+        border = BorderStroke(2.dp, BrandGreen),
+        shadowElevation = 6.dp,
+        tonalElevation = 0.dp,
+        color = Color.White
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(BrandCornerRadius))
+        ) {
             Image(
                 painter = painterResource(R.drawable.zad_bg),
                 contentDescription = null,

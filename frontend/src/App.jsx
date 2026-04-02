@@ -4,6 +4,12 @@ import { CrossyGamePage } from './pages/CrossyGamePage'
 import { GamesPage } from './pages/GamesPage'
 import { BattlePassPage } from './pages/BattlePassPage.jsx'
 import { AdminBattlePassPage } from './pages/AdminBattlePassPage.jsx'
+import { AdminPanelPage } from './pages/AdminPanelPage.jsx'
+import { AdminUsersPage } from './pages/AdminUsersPage.jsx'
+import { AdminRidesPage } from './pages/AdminRidesPage.jsx'
+import { AdminLoyaltyPage } from './pages/AdminLoyaltyPage.jsx'
+import { AdminStorePage } from './pages/AdminStorePage.jsx'
+import { AdminTasksPage } from './pages/AdminTasksPage.jsx'
 import { AuthProvider, useAuth, API_BASE } from './authContext.jsx'
 import { LoadingDots } from './components/LoadingDots.jsx'
 import './App.css'
@@ -111,7 +117,7 @@ function Sidebar({ user, userLoading, theme, setTheme, onLogout }) {
           <Link to="/profile">Профиль</Link>
           <Link to="/games">Игры</Link>
           <Link to="/battle-pass">Батл-Пасс</Link>
-          {user?.isAdmin && <Link to="/admin/battle-pass">Админ панель</Link>}
+          {user?.isAdmin && <Link to="/admin">Админ панель</Link>}
         </nav>
         <div className="coins">
           DriveCoin:{' '}
@@ -234,6 +240,12 @@ function Dashboard({ auth }) {
           <Route path="/games" element={<GamesPage />} />
           <Route path="/battle-pass" element={<BattlePassPage token={auth.token} user={auth.user} />} />
           <Route path="/admin/battle-pass" element={<AdminBattlePassPage token={auth.token} user={auth.user} />} />
+          <Route path="/admin" element={<AdminPanelPage token={auth.token} user={auth.user} />} />
+          <Route path="/admin/users" element={<AdminUsersPage user={auth.user} />} />
+          <Route path="/admin/rides" element={<AdminRidesPage user={auth.user} />} />
+          <Route path="/admin/loyalty" element={<AdminLoyaltyPage user={auth.user} />} />
+          <Route path="/admin/store" element={<AdminStorePage user={auth.user} />} />
+          <Route path="/admin/tasks" element={<AdminTasksPage user={auth.user} />} />
         </Routes>
       </section>
     </main>

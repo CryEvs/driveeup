@@ -731,3 +731,63 @@ body.theme-dark .loading-dots__dot {
 .auth-submit .loading-dots__dot {
   background: #1d2a08;
 }
+
+/* Общая админ-панель */
+.admin-panel-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin-top: 12px;
+}
+
+.admin-card {
+  background: #ffffff;
+  border: 1px solid #d7efb5;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+}
+
+.admin-card--disabled {
+  opacity: 0.7;
+}
+
+.admin-card__title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1d2a08;
+}
+
+.admin-card__desc {
+  font-size: 13px;
+  color: #6c6c6c;
+  line-height: 1.35;
+}
+
+.admin-card__soon {
+  margin-top: auto;
+  color: #6c6c6c;
+  font-weight: 800;
+  font-size: 12px;
+  padding-top: 6px;
+}
+
+.admin-card__link {
+  margin-top: auto;
+  align-self: flex-start;
+  text-decoration: none;
+  background: var(--brand);
+  border: 1px solid var(--brand-dark);
+  color: #1d2a08;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+.admin-card__link:hover {
+  filter: brightness(1.05);
+}
