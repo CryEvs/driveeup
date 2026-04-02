@@ -106,7 +106,8 @@ fun CityScreen(
     token: String,
     user: User,
     onOpenMenu: () -> Unit,
-    onOpenDriveUp: () -> Unit
+    onOpenDriveUp: () -> Unit,
+    onOpenGames: () -> Unit
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
@@ -336,7 +337,7 @@ fun CityScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -356,9 +357,28 @@ fun CityScreen(
                                 )
                             }
                         }
+                        val rideTopBar = activeRide
+                        val canPlayNow = rideTopBar?.status == "accepted"
+                        Button(
+                            onClick = onOpenGames,
+                            enabled = canPlayNow,
+                            modifier = Modifier.height(CityTopBarControlDp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = BrandGreen,
+                                contentColor = Color(0xFF1D2A08),
+                                disabledContainerColor = BrandGreen.copy(alpha = 0.45f),
+                                disabledContentColor = Color(0xFF1D2A08).copy(alpha = 0.7f)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text("Играть", fontWeight = FontWeight.Bold)
+                        }
                         val tier = loyaltyTier(user)
                         Surface(
-                            modifier = Modifier.clickable(onClick = onOpenDriveUp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(onClick = onOpenDriveUp),
                             shape = RoundedCornerShape(CityTopBarBalanceCornerDp),
                             color = Color.White,
                             shadowElevation = 2.dp

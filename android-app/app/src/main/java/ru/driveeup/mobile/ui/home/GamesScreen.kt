@@ -102,7 +102,12 @@ private fun cooldownRemainingMs(ctx: Context): Long {
     if (until != raw) {
         prefs.edit().putLong(KEY_COOLDOWN_UNTIL, until).apply()
     }
-    return max(0L, until - now)
+    val remaining = max(0L, until - now)
+    if (remaining > MAX_COOLDOWN_MS) {
+        prefs.edit().putLong(KEY_COOLDOWN_UNTIL, 0L).apply()
+        return 0L
+    }
+    return remaining
 }
 
 private fun startCooldownNative(ctx: Context) {
@@ -158,8 +163,14 @@ fun GamesScreen(
         }
         while (true) {
             val active = runCatching { rideRepo.passengerActive(token) }.getOrNull()
-            waitingTaxi = active?.status in listOf("searching", "accepted", "at_pickup")
+            waitingTaxi = active?.status == "accepted"
             delay(2500)
+        }
+    }
+
+    LaunchedEffect(waitingTaxi, showGame) {
+        if (showGame && !waitingTaxi) {
+            closeGameDialog()
         }
     }
 
@@ -256,9 +267,13 @@ fun GamesScreen(
                                                             "var k='$LS_COOLDOWN_KEY';" +
                                                             "var tk=" + org.json.JSONObject.quote(authToken) + ";" +
                                                             "var p=" + prefsUntil + ";" +
+                                                            "var max=" + (now + MAX_COOLDOWN_MS) + ";" +
+                                                            "var min=" + (now - 2L * 86_400_000L) + ";" +
                                                             "var ls=0;" +
                                                             "try{var x=localStorage.getItem(k);" +
                                                             "ls=x?parseInt(x,10):0;}catch(e){}" +
+                                                            "if(!isFinite(ls)){ls=0;}" +
+                                                            "if(ls>max||ls<min){ls=0;try{localStorage.removeItem(k);}catch(e){}}" +
                                                             "if(tk){" +
                                                             "try{localStorage.setItem('driveeup_token',tk);}catch(e){}" +
                                                             "try{sessionStorage.setItem('driveeup_token',tk);}catch(e){}" +
@@ -271,7 +286,7 @@ fun GamesScreen(
                                                             "}" +
                                                             "var u=Math.max(p,ls);" +
                                                             "var now=Date.now();" +
-                                                            "if(u>now){localStorage.setItem(k,String(u));}" +
+                                                            "if(u>now){localStorage.setItem(k,String(u));}else{try{localStorage.removeItem(k);}catch(e){}}" +
                                                             "return u;}catch(e){return 0;}})()"
                                                     ) { result ->
                                                         val uRaw = parseEvaluateJavascriptLong(result)
@@ -288,6 +303,16 @@ fun GamesScreen(
                                                                     "(function(){try{" +
                                                                         "localStorage.setItem('" + LS_COOLDOWN_KEY + "',String(" + u + "));" +
                                                                         "try{sessionStorage.setItem('" + LS_COOLDOWN_KEY + "',String(" + u + "));}catch(e){}" +
+                                                                        "}catch(e){}return true;})()",
+                                                                    null
+                                                                )
+                                                            }
+                                                        } else {
+                                                            view?.post {
+                                                                view.evaluateJavascript(
+                                                                    "(function(){try{" +
+                                                                        "localStorage.removeItem('" + LS_COOLDOWN_KEY + "');" +
+                                                                        "try{sessionStorage.removeItem('" + LS_COOLDOWN_KEY + "');}catch(e){}" +
                                                                         "}catch(e){}return true;})()",
                                                                     null
                                                                 )
@@ -436,7 +461,7 @@ private fun CrossRoadGameCard(
                         )
                     } else if (!waitingTaxi) {
                         Text(
-                            text = "Игры доступны только при заказе и ожидании такси",
+                            text = "Игры доступны только после принятия заказа водителем",
                             color = Color(0xFFE8F5D0),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,

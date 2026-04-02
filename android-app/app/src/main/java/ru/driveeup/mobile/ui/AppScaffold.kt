@@ -236,7 +236,7 @@ private fun AppContent(
                     AppPage.CITY -> {
                         if (isDriverUi) {
                             DriverCityScreen(
-                                driveCoin = state.user?.driveCoin ?: 0,
+                                driveCoin = state.user?.driveCoin ?: 0.0,
                                 token = state.token,
                                 user = state.user!!,
                                 onOpenMenu = { scope.launch { drawerState.open() } },
@@ -244,11 +244,12 @@ private fun AppContent(
                             )
                         } else {
                             CityScreen(
-                                driveCoin = state.user?.driveCoin ?: 0,
+                                driveCoin = state.user?.driveCoin ?: 0.0,
                                 token = state.token,
                                 user = state.user!!,
                                 onOpenMenu = { scope.launch { drawerState.open() } },
-                                onOpenDriveUp = { page = AppPage.DRIVE_UP }
+                                onOpenDriveUp = { page = AppPage.DRIVE_UP },
+                                onOpenGames = { page = AppPage.GAMES }
                             )
                         }
                     }
