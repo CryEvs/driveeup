@@ -10,11 +10,63 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import java.net.URL
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+
+/** Подгоняет зум и центр так, чтобы весь маршрут попал в экран с отступом. */
+fun fitMapViewToGeoPoints(map: MapView, points: List<GeoPoint>, paddingPx: Int) {
+    if (points.isEmpty()) return
+    if (points.size == 1) {
+        map.controller.setCenter(points[0])
+        map.controller.setZoom(16.0)
+        map.invalidate()
+        return
+    }
+    var minLat = points[0].latitude
+    var maxLat = minLat
+    var minLon = points[0].longitude
+    var maxLon = minLon
+    for (i in 1 until points.size) {
+        val p = points[i]
+        minLat = min(minLat, p.latitude)
+        maxLat = max(maxLat, p.latitude)
+        minLon = min(minLon, p.longitude)
+        maxLon = max(maxLon, p.longitude)
+    }
+    var latSpan = (maxLat - minLat) * 1.18 + 0.0008
+    var lonSpan = (maxLon - minLon) * 1.18 + 0.0008
+    latSpan = max(latSpan, 0.003)
+    lonSpan = max(lonSpan, 0.003)
+    val midLat = (minLat + maxLat) / 2.0
+    val midLon = (minLon + maxLon) / 2.0
+    val north = (midLat + latSpan / 2.0).coerceIn(-85.0, 85.0)
+    val south = (midLat - latSpan / 2.0).coerceIn(-85.0, 85.0)
+    val east = midLon + lonSpan / 2.0
+    val west = midLon - lonSpan / 2.0
+    if (abs(north - south) < 1e-9 || abs(east - west) < 1e-9) {
+        map.controller.setCenter(GeoPoint(midLat, midLon))
+        map.controller.setZoom(15.0)
+        map.invalidate()
+        return
+    }
+    val bbox = BoundingBox(north, east, south, west)
+    map.post {
+        runCatching {
+            map.zoomToBoundingBox(bbox, true, paddingPx.coerceAtLeast(24))
+        }.onFailure {
+            map.controller.setCenter(GeoPoint(midLat, midLon))
+            map.controller.setZoom(14.5)
+        }
+        map.invalidate()
+    }
+}
 
 /** Результат OSRM: точки, длительность (с), длина (м). */
 data class OsrmRouteResult(
@@ -126,10 +178,16 @@ fun drawDriverTwoLegRoute(
             overlaysRef.add(markerB)
 
             map.invalidate()
-            val cLat = (aLat + bLat) / 2
-            val cLon = (aLon + bLon) / 2
-            map.controller.setZoom(12.0)
-            map.controller.setCenter(GeoPoint(cLat, cLon))
+            val padPx = (44f * context.resources.displayMetrics.density).toInt().coerceIn(32, 120)
+            val allPoints = mutableListOf<GeoPoint>()
+            if (toA != null && toA.points.size >= 2) {
+                allPoints.addAll(toA.points)
+            }
+            allPoints.addAll(aToB.points)
+            if (driverLat != null && driverLon != null) {
+                allPoints.add(GeoPoint(driverLat, driverLon))
+            }
+            fitMapViewToGeoPoints(map, allPoints, padPx)
         }
     }
 }
@@ -187,20 +245,20 @@ fun drawRouteAb(
                 overlaysRef.add(markerA)
                 overlaysRef.add(markerB)
 
+                val routePoints = (0 until coords.length()).map { idx ->
+                    val c = coords.getJSONArray(idx)
+                    GeoPoint(c.getDouble(1), c.getDouble(0))
+                }
                 val polyline = Polyline().apply {
                     outlinePaint.color = routeColorArgb
                     outlinePaint.strokeWidth = 10f
-                    setPoints((0 until coords.length()).map { idx ->
-                        val c = coords.getJSONArray(idx)
-                        GeoPoint(c.getDouble(1), c.getDouble(0))
-                    })
+                    setPoints(routePoints)
                 }
                 map.overlays.add(polyline)
                 overlaysRef.add(polyline)
                 map.invalidate()
-                val centerLat = (from.lat + to.lat) / 2
-                val centerLon = (from.lon + to.lon) / 2
-                map.controller.animateTo(GeoPoint(centerLat, centerLon))
+                val padPx = (44f * context.resources.displayMetrics.density).toInt().coerceIn(32, 120)
+                fitMapViewToGeoPoints(map, routePoints, padPx)
             }
         }
     }

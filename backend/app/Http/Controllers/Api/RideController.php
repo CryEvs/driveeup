@@ -403,7 +403,7 @@ class RideController extends Controller
         $ride->save();
 
         if ($newStatus === 'completed') {
-            $this->accruePassengerRideCoins($ride->fresh(['passenger']));
+            $this->accruePassengerRideCoins((int) $ride->id);
         }
 
         return response()->json($this->transformRide($ride->fresh(['passenger', 'driver'])));
@@ -411,37 +411,60 @@ class RideController extends Controller
 
     /**
      * Начисление DriveCoin пассажиру: стоимость поездки × 0.1 × коэффициент рейтинга.
-     * Коэффициент: ≥4.95 → 1; <4.1 → 0.1; (4.1; 4.9] линейно 0.1…0.9; (4.9; 4.95) → 0.9…1.0.
+     * Идемпотентно: один раз на заказ (ride_coin_credited), в транзакции с блокировкой строк.
      */
-    private function accruePassengerRideCoins(RideOrder $ride): void
+    private function accruePassengerRideCoins(int $rideId): void
     {
-        $passenger = $ride->passenger;
-        if (! $passenger) {
-            return;
+        try {
+            DB::transaction(function () use ($rideId) {
+                $lockedRide = RideOrder::lockForUpdate()->find($rideId);
+                if (! $lockedRide || $lockedRide->ride_coin_credited) {
+                    return;
+                }
+
+                $passenger = User::lockForUpdate()->find($lockedRide->passenger_id);
+                if (! $passenger) {
+                    return;
+                }
+
+                $priceRub = (float) ($lockedRide->agreed_price_rub ?? $lockedRide->price_rub);
+                if ($priceRub <= 0) {
+                    return;
+                }
+
+                $rating = (float) ($passenger->rating_avg ?? 5.0);
+                $coeff = $this->passengerRideRatingCoefficient($rating);
+                $amount = round($priceRub * 0.1 * $coeff, 2);
+                if ($amount <= 0) {
+                    return;
+                }
+
+                $passenger->drivee_coin = round((float) $passenger->drivee_coin + $amount, 2);
+                $passenger->total_drive_coin = round((float) $passenger->total_drive_coin + $amount, 2);
+                $passenger->save();
+
+                $lockedRide->ride_coin_credited = true;
+                $lockedRide->save();
+
+                $amountStr = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
+                $coeffStr = rtrim(rtrim(number_format($coeff, 2, '.', ''), '0'), '.');
+                $ratingStr = number_format($rating, 2, '.', '');
+
+                try {
+                    UserNotification::create([
+                        'user_id' => $passenger->id,
+                        'type' => 'DRIVECOIN_ACCRUAL',
+                        'title' => 'Начисление ДрайвКойнов',
+                        'body' => 'Начисление койнов за поездку: '.$amountStr
+                            .' (поездка '.(int) round($priceRub).' ₽, ваш рейтинг '.$ratingStr.', коэффициент '.$coeffStr.')',
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::warning('ride coin notification: '.$e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('accruePassengerRideCoins: '.$e->getMessage(), ['rideId' => $rideId]);
         }
-
-        $priceRub = (float) ($ride->agreed_price_rub ?? $ride->price_rub);
-        $coeff = $this->passengerRideRatingCoefficient((float) $passenger->rating_avg);
-        $amount = round($priceRub * 0.1 * $coeff, 2);
-        if ($amount <= 0) {
-            return;
-        }
-
-        $passenger->drivee_coin = round((float) $passenger->drivee_coin + $amount, 2);
-        $passenger->total_drive_coin = round((float) $passenger->total_drive_coin + $amount, 2);
-        $passenger->save();
-
-        $amountStr = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
-        $coeffStr = rtrim(rtrim(number_format($coeff, 2, '.', ''), '0'), '.');
-        $ratingStr = number_format((float) $passenger->rating_avg, 2, '.', '');
-
-        UserNotification::create([
-            'user_id' => $passenger->id,
-            'type' => 'DRIVECOIN_ACCRUAL',
-            'title' => 'Начисление ДрайвКойнов',
-            'body' => 'Начисление койнов за поездку: '.$amountStr
-                .' (поездка '.(int) round($priceRub).' ₽, ваш рейтинг '.$ratingStr.', коэффициент '.$coeffStr.')',
-        ]);
     }
 
     private function passengerRideRatingCoefficient(float $rating): float

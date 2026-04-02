@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -60,6 +60,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
+import ru.driveeup.mobile.ui.home.AvatarImage
 import ru.driveeup.mobile.ui.home.BattlePassScreen
 import ru.driveeup.mobile.domain.UserRole
 import ru.driveeup.mobile.ui.home.CityScreen
@@ -195,7 +196,13 @@ private fun AppContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(shape = CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(42.dp)) {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
+                                AvatarImage(
+                                    avatarUrl = state.user?.avatarUrl,
+                                    contentDescription = "Аватар",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                )
                             }
                             Column(
                                 modifier = Modifier

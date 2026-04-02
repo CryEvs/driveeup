@@ -2,11 +2,13 @@ package ru.driveeup.mobile.ui.home
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +62,7 @@ import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.views.MapView
+import ru.driveeup.mobile.R
 import ru.driveeup.mobile.data.RideRepository
 import ru.driveeup.mobile.domain.RideOrder
 import ru.driveeup.mobile.domain.User
@@ -69,13 +73,17 @@ private val BrandDark = Color(0xFF5CB018)
 private val SaladOutline = Color(0xFFB8E986)
 private val BlueRoute = Color(0xFF29B6F6)
 
+/** Как у пассажира на экране «Город»: круглое меню и высота блока баланса. */
+private val DriverTopBarControlDp = 44.dp
+private val DriverTopBarBalanceCornerDp = 22.dp
+
 @Composable
 fun DriverCityScreen(
     driveCoin: Double,
     token: String,
-    @Suppress("UNUSED_PARAMETER") user: User,
+    user: User,
     onOpenMenu: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onOpenDriveUp: () -> Unit
+    onOpenDriveUp: () -> Unit
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
@@ -180,25 +188,80 @@ fun DriverCityScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(Modifier.size(42.dp).clickable(onClick = onOpenMenu), shape = CircleShape, color = Color.White) {
-                    Icon(Icons.Default.Menu, null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
+                Surface(
+                    modifier = Modifier
+                        .size(DriverTopBarControlDp)
+                        .clickable(onClick = onOpenMenu),
+                    shape = CircleShape,
+                    color = Color.White,
+                    shadowElevation = 2.dp
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Menu,
+                            contentDescription = "Меню",
+                            tint = Color(0xFF1D2A08),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-                DriverAvailabilityToggle(
-                    free = freeForOrders,
-                    onToggle = { freeForOrders = !freeForOrders }
-                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    DriverAvailabilityToggle(
+                        free = freeForOrders,
+                        onToggle = { freeForOrders = !freeForOrders }
+                    )
+                }
+                val tier = loyaltyTier(user)
+                Surface(
+                    modifier = Modifier.clickable(onClick = onOpenDriveUp),
+                    shape = RoundedCornerShape(DriverTopBarBalanceCornerDp),
+                    color = Color.White,
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .height(DriverTopBarControlDp)
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_coin),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = "$driveCoin",
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF1D2A08)
+                        )
+                        Image(
+                            painter = painterResource(loyaltyTierIconRes(tier)),
+                            contentDescription = loyaltyTierLabel(tier),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.size(8.dp))
                 Surface(
                     Modifier
-                        .size(42.dp)
+                        .size(DriverTopBarControlDp)
                         .clickable { showOrderOptions = true },
                     shape = CircleShape,
-                    color = Color(0xFFF5F5F5)
+                    color = Color(0xFFF5F5F5),
+                    shadowElevation = 1.dp
                 ) {
-                    Text("🔑", modifier = Modifier.padding(8.dp), fontSize = 18.sp)
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("🔑", fontSize = 18.sp)
+                    }
                 }
             }
 
