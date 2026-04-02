@@ -58,34 +58,37 @@ fun DriveUpScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.Black)
-                .padding(horizontal = 2.dp, vertical = 4.dp),
+                .padding(horizontal = 2.dp, vertical = 0.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onOpenMenu) {
+            IconButton(
+                onClick = onOpenMenu,
+                modifier = Modifier.size(40.dp)
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Меню",
-                    tint = BrandGreen
+                    tint = BrandGreen,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Box(
+            Image(
+                painter = painterResource(R.drawable.ic_logo_driveup),
+                contentDescription = "DriveUP",
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center
+                    .height(18.dp)
+                    .padding(start = 2.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = onNotifications,
+                modifier = Modifier.size(40.dp)
             ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_logo_driveup),
-                    contentDescription = "DriveUP",
-                    modifier = Modifier.height(22.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-            IconButton(onClick = onNotifications) {
                 Image(
                     painter = painterResource(R.drawable.ic_notify),
                     contentDescription = "Уведомления",
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -95,20 +98,19 @@ fun DriveUpScreen(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-            ) {
+            Box(Modifier.fillMaxWidth()) {
                 Image(
                     painter = painterResource(R.drawable.reyvo_hello),
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter),
+                    contentScale = ContentScale.FillWidth,
+                    alignment = Alignment.TopCenter
                 )
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .matchParentSize()
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {

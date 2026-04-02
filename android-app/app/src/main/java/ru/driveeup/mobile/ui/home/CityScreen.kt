@@ -36,6 +36,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -136,7 +137,7 @@ fun CityScreen(
     var rateStars by remember { mutableStateOf(0) }
     var orderingBusy by remember { mutableStateOf(false) }
     /** После «Отмена» в оценке не показываем снова, пока придёт другая поездка. */
-    var dismissedRatingRideId by remember { mutableStateOf<String?>(null) }
+    var dismissedRatingRideId by remember { mutableStateOf<Long?>(null) }
 
     suspend fun reverseGeocode(lat: Double, lon: Double): String {
         return withContext(Dispatchers.IO) {
@@ -290,108 +291,21 @@ fun CityScreen(
         }
     }
 
+    val activeRideSnapshot = activeRide
     val needsPassengerRating =
-        activeRide != null &&
-            activeRide.status == "completed" &&
-            activeRide.driver != null &&
-            activeRide.driverRating == null &&
-            activeRide.id != dismissedRatingRideId
+        activeRideSnapshot != null &&
+            activeRideSnapshot.status == "completed" &&
+            activeRideSnapshot.driver != null &&
+            activeRideSnapshot.driverRating == null &&
+            activeRideSnapshot.id != dismissedRatingRideId
 
-    val tripBlocksOrderForm = activeRide != null && (
-        activeRide.status in listOf("searching", "accepted", "at_pickup", "in_trip") ||
+    val tripBlocksOrderForm = activeRideSnapshot != null && (
+        activeRideSnapshot.status in listOf("searching", "accepted", "at_pickup", "in_trip") ||
             needsPassengerRating
         )
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(42.dp).clickable(onClick = onOpenMenu),
-                    shape = CircleShape,
-                    color = Color.White
-                ) {
-                    Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
-                }
-                val tier = loyaltyTier(user)
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(24.dp))
-                        .clickable(onClick = onOpenDriveUp)
-                        .background(Color(0xFFF5F5F5))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_coin),
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Text(
-                        text = "$driveCoin",
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1D2A08)
-                    )
-                    Image(
-                        painter = painterResource(loyaltyTierIconRes(tier)),
-                        contentDescription = loyaltyTierLabel(tier),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = loyaltyTierLabel(tier),
-                        fontSize = 13.sp,
-                        color = Color(0xFF5C5C5C)
-                    )
-                }
-            }
-
-            val rideTop = activeRide
-            if (rideTop != null) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                    when (rideTop.status) {
-                        "accepted" -> PassengerEtaBanner(minutes = rideTop.driverEtaMinutes ?: 3)
-                        "at_pickup" -> {
-                            if (!rideTop.passengerExiting) {
-                                PassengerAtPickupCombined(
-                                    onExitClick = {
-                                        uiScope.launch {
-                                            runCatching {
-                                                rideRepo.passengerExit(token, rideTop.id)
-                                                activeRide = rideRepo.passengerActive(token)
-                                            }
-                                        }
-                                    }
-                                )
-                            } else {
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "Вы выходите к водителю",
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF1D2A08)
-                                    )
-                                }
-                            }
-                        }
-                        "in_trip" -> PassengerInTripBanner()
-                        else -> {}
-                    }
-                }
-            }
-
             Box(modifier = Modifier.fillMaxWidth().weight(if (tripBlocksOrderForm) 1f else 3f)) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -410,6 +324,97 @@ fun CityScreen(
                         }
                     }
                 )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onOpenMenu) {
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = "Меню",
+                                tint = Color(0xFF1D2A08),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                        val tier = loyaltyTier(user)
+                        Row(
+                            modifier = Modifier.clickable(onClick = onOpenDriveUp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_coin),
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = "$driveCoin",
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF1D2A08)
+                            )
+                            Image(
+                                painter = painterResource(loyaltyTierIconRes(tier)),
+                                contentDescription = loyaltyTierLabel(tier),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = loyaltyTierLabel(tier),
+                                fontSize = 13.sp,
+                                color = Color(0xFF1D2A08)
+                            )
+                        }
+                    }
+
+                    val rideTop = activeRide
+                    if (rideTop != null) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                            when (rideTop.status) {
+                                "accepted" -> PassengerEtaBanner(minutes = rideTop.driverEtaMinutes ?: 3)
+                                "at_pickup" -> {
+                                    if (!rideTop.passengerExiting) {
+                                        PassengerAtPickupCombined(
+                                            onExitClick = {
+                                                uiScope.launch {
+                                                    runCatching {
+                                                        rideRepo.passengerExit(token, rideTop.id)
+                                                        activeRide = rideRepo.passengerActive(token)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        Surface(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = Color.White,
+                                            shadowElevation = 4.dp
+                                        ) {
+                                            Text(
+                                                "Вы выходите к водителю",
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF1D2A08)
+                                            )
+                                        }
+                                    }
+                                }
+                                "in_trip" -> PassengerInTripBanner()
+                                else -> {}
+                            }
+                        }
+                    }
+                }
 
                 Surface(
                     modifier = Modifier

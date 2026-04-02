@@ -19,9 +19,9 @@ fun loyaltyTier(user: User): LoyaltyTier {
 
 @DrawableRes
 fun loyaltyTierIconRes(tier: LoyaltyTier): Int = when (tier) {
-    LoyaltyTier.BRONZE -> R.drawable.ic_tier_bronze
-    LoyaltyTier.SILVER -> R.drawable.ic_tier_silver
-    LoyaltyTier.GOLD -> R.drawable.ic_tier_gold
+    LoyaltyTier.BRONZE -> R.drawable.loyalty_bronze
+    LoyaltyTier.SILVER -> R.drawable.loyalty_silver
+    LoyaltyTier.GOLD -> R.drawable.loyalty_gold
 }
 
 fun loyaltyTierLabel(tier: LoyaltyTier): String = when (tier) {
