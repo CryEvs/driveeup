@@ -11,6 +11,7 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/auth/me', [AuthController::class, 'me']);
 Route::put('/auth/avatar', [AuthController::class, 'updateAvatar']);
+Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
 Route::put('/auth/role', [AuthController::class, 'setRole']);
 
 Route::post('/rides', [RideController::class, 'store']);

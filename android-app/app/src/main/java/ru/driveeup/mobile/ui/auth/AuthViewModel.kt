@@ -143,6 +143,21 @@ class AuthViewModel(
         }
     }
 
+    fun updateProfile(firstName: String, lastName: String, email: String, city: String) {
+        val token = _uiState.value.token
+        if (token.isBlank()) return
+        if (email.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "Email обязателен")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(loading = true, error = null)
+            runCatching { repo.updateProfile(token, firstName, lastName, email, city) }
+                .onSuccess { user -> _uiState.value = _uiState.value.copy(loading = false, user = user, error = null) }
+                .onFailure { _uiState.value = _uiState.value.copy(loading = false, error = it.message ?: "Ошибка сохранения профиля") }
+        }
+    }
+
     fun logout() {
         _uiState.value = _uiState.value.copy(token = "", user = null, error = null, registerMode = false, sessionChecking = false)
     }

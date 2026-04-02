@@ -94,6 +94,34 @@ class AuthController extends Controller
         return response()->json($this->transformUser($user));
     }
 
+    public function updateProfile(Request $request)
+    {
+        $user = $this->resolveUserFromToken($request);
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'firstName' => ['nullable', 'string', 'max:120'],
+            'lastName' => ['nullable', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'city' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $first = trim((string) ($validated['firstName'] ?? ''));
+        $last = trim((string) ($validated['lastName'] ?? ''));
+        $displayName = trim(implode(' ', array_filter([$first, $last])));
+
+        $user->first_name = $first;
+        $user->last_name = $last;
+        $user->email = mb_strtolower(trim((string) $validated['email']));
+        $user->city = trim((string) ($validated['city'] ?? ''));
+        $user->name = $displayName !== '' ? $displayName : explode('@', $user->email)[0];
+        $user->save();
+
+        return response()->json($this->transformUser($user));
+    }
+
     public function setRole(Request $request)
     {
         $user = $this->resolveUserFromToken($request);

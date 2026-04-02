@@ -198,9 +198,9 @@ fun DriveUpLoyaltyLevelsScreen(
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Row(Modifier.fillMaxWidth()) {
-                LoyaltyTab("Бронза", "#383C47", selectedTier == "BRONZE") { selectedTier = "BRONZE" }
-                LoyaltyTab("Серебро", "#97EA28", selectedTier == "SILVER") { selectedTier = "SILVER" }
-                LoyaltyTab("Золото", "#F24B16", selectedTier == "GOLD") { selectedTier = "GOLD" }
+                LoyaltyTab("Бронза", "#383C47", selectedTier == "BRONZE", modifier = Modifier.weight(1f)) { selectedTier = "BRONZE" }
+                LoyaltyTab("Серебро", "#97EA28", selectedTier == "SILVER", modifier = Modifier.weight(1f)) { selectedTier = "SILVER" }
+                LoyaltyTab("Золото", "#F24B16", selectedTier == "GOLD", modifier = Modifier.weight(1f)) { selectedTier = "GOLD" }
             }
             Spacer(Modifier.height(18.dp))
             Text("Описание", color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
@@ -215,12 +215,12 @@ private fun LoyaltyTab(
     title: String,
     colorHex: String,
     active: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val color = Color(android.graphics.Color.parseColor(colorHex))
     Column(
-        modifier = Modifier
-            .weight(1f)
+        modifier = modifier
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

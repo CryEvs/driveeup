@@ -119,7 +119,10 @@ fun DriveeUpAppScaffold() {
                         state = state,
                         onToggleTheme = { vm.setTheme(it) },
                         onLogout = { vm.logout() },
-                        onChangeAvatar = { vm.updateAvatar(it) }
+                        onChangeAvatar = { vm.updateAvatar(it) },
+                        onSaveProfile = { firstName, lastName, email, city ->
+                            vm.updateProfile(firstName, lastName, email, city)
+                        }
                     )
                 }
             }
@@ -134,7 +137,8 @@ private fun AppContent(
     state: ru.driveeup.mobile.ui.auth.AuthUiState,
     onToggleTheme: (Boolean) -> Unit,
     onLogout: () -> Unit,
-    onChangeAvatar: (String) -> Unit
+    onChangeAvatar: (String) -> Unit,
+    onSaveProfile: (String, String, String, String) -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -250,6 +254,7 @@ private fun AppContent(
                     AppPage.PROFILE -> ProfileScreen(
                         user = state.user!!,
                         onChangeAvatar = onChangeAvatar,
+                        onSaveProfile = onSaveProfile,
                         onOpenMenu = { scope.launch { drawerState.open() } },
                         onLogout = onLogout
                     )

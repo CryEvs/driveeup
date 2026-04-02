@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -105,6 +104,7 @@ private fun ProfileAvatar(avatarUrl: String?, modifier: Modifier = Modifier) {
 fun ProfileScreen(
     user: User,
     onChangeAvatar: (String) -> Unit,
+    onSaveProfile: (firstName: String, lastName: String, email: String, city: String) -> Unit,
     onOpenMenu: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -148,7 +148,21 @@ fun ProfileScreen(
             ) {
                 Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
             }
-            OutlinedButton(onClick = {}, shape = RoundedCornerShape(10.dp)) { Text("Сохранить") }
+            Button(
+                onClick = {
+                    onSaveProfile(
+                        firstName.trim(),
+                        lastName.trim(),
+                        email.trim(),
+                        city.trim()
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF96EA28),
+                    contentColor = Color(0xFF1D2A08)
+                )
+            ) { Text("Сохранить") }
         }
         Spacer(Modifier.height(10.dp))
         Divider(color = Color(0xFFD8D8D8))

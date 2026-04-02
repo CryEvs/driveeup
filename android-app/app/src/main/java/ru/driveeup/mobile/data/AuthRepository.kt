@@ -70,6 +70,22 @@ class AuthRepository {
         parseUser(response)
     }
 
+    suspend fun updateProfile(
+        token: String,
+        firstName: String,
+        lastName: String,
+        email: String,
+        city: String
+    ): User = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("firstName", firstName)
+            .put("lastName", lastName)
+            .put("email", email)
+            .put("city", city)
+        val response = putJson("/auth/profile", payload.toString(), token)
+        parseUser(response)
+    }
+
     suspend fun setRole(token: String, role: UserRole): User = withContext(Dispatchers.IO) {
         val payload = JSONObject().put("role", role.name)
         val response = putJson("/auth/role", payload.toString(), token)
