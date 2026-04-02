@@ -86,14 +86,16 @@ fun PassengerSearchingBottomSheet(priceRub: Int, onCancelSearch: () -> Unit) {
 @Composable
 fun PassengerEtaBanner(minutes: Int, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
         color = Color.White,
         shadowElevation = 4.dp
     ) {
         Text(
             "Водитель будет через ~$minutes мин",
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFF1D2A08)
@@ -104,14 +106,16 @@ fun PassengerEtaBanner(minutes: Int, modifier: Modifier = Modifier) {
 @Composable
 fun PassengerWaitingDriverBanner(modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
         color = Color.White,
         shadowElevation = 4.dp
     ) {
         Text(
             "Водитель ожидает",
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFF1D2A08)
@@ -120,18 +124,52 @@ fun PassengerWaitingDriverBanner(modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun PassengerAtPickupCombined(
+    onExitClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White,
+        shadowElevation = 4.dp
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                "Водитель ожидает",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF1D2A08)
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = onExitClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF96EA28), contentColor = Color(0xFF1D2A08))
+            ) {
+                Text("Я выхожу", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
 fun PassengerInTripBanner(modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
         color = Color.White,
         shadowElevation = 4.dp
     ) {
         Text(
             "В пути",
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
             color = Color(0xFF1D2A08)
         )
     }
@@ -146,10 +184,10 @@ fun PassengerDriverInfoSheet(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.35f),
-        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+            .fillMaxHeight(0.4f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = Color.White,
-        tonalElevation = 6.dp
+        tonalElevation = 8.dp
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

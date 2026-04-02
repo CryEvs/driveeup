@@ -32,6 +32,8 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -100,7 +102,12 @@ private fun ProfileAvatar(avatarUrl: String?, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit, onOpenMenu: () -> Unit) {
+fun ProfileScreen(
+    user: User,
+    onChangeAvatar: (String) -> Unit,
+    onOpenMenu: () -> Unit,
+    onLogout: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var firstName by remember { mutableStateOf(user.firstName) }
@@ -130,9 +137,9 @@ fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit, onOpenMenu: () -
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(16.dp)
     ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 modifier = Modifier.size(42.dp).clickable(onClick = onOpenMenu),
@@ -143,6 +150,7 @@ fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit, onOpenMenu: () -
             }
             OutlinedButton(onClick = {}, shape = RoundedCornerShape(10.dp)) { Text("Сохранить") }
         }
+        Spacer(Modifier.height(10.dp))
         Divider(color = Color(0xFFD8D8D8))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
             ProfileAvatar(
@@ -187,6 +195,16 @@ fun ProfileScreen(user: User, onChangeAvatar: (String) -> Unit, onOpenMenu: () -
                 Text("DriveCoin: ${user.driveCoin}")
                 Text("DriveCoin за все время: ${user.totalDriveCoin}")
             }
+        }
+        }
+        Spacer(Modifier.weight(1f))
+        Button(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935), contentColor = Color.White),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Выйти")
         }
     }
 }

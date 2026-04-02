@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -88,6 +89,10 @@ fun DriverCityScreen(
     var activeTrip by remember { mutableStateOf<RideOrder?>(null) }
     var offerRide by remember { mutableStateOf<RideOrder?>(null) }
     var offerProgress by remember { mutableStateOf(1f) }
+    /** Заказы, для которых таймер/прогресс уже отработал или пропущены вручную — при повторном открытии из ленты без таймера. */
+    var offersWithoutCountdownIds by remember { mutableStateOf(setOf<Long>()) }
+    /** Чтобы не открывать снова тот же верхний заказ после закрытия окна. */
+    var previousFeedTopId by remember { mutableStateOf<Long?>(null) }
     var showOrderOptions by remember { mutableStateOf(false) }
     var showEtaPick by remember { mutableStateOf(false) }
     var pendingRideId by remember { mutableStateOf<Long?>(null) }
@@ -109,15 +114,26 @@ fun DriverCityScreen(
         }
     }
 
-    LaunchedEffect(offerRide, freeForOrders, showEtaPick) {
-        val o = offerRide
-        if (o == null || !freeForOrders || showEtaPick) return@LaunchedEffect
+    LaunchedEffect(feed, freeForOrders, activeTrip, offerRide) {
+        if (!freeForOrders || activeTrip != null || offerRide != null) return@LaunchedEffect
+        val top = feed.firstOrNull() ?: return@LaunchedEffect
+        if (previousFeedTopId != top.id) {
+            previousFeedTopId = top.id
+            offerRide = top
+        }
+    }
+
+    LaunchedEffect(offerRide?.id, freeForOrders, showEtaPick) {
+        val o = offerRide ?: return@LaunchedEffect
+        if (!freeForOrders || showEtaPick) return@LaunchedEffect
+        if (o.id in offersWithoutCountdownIds) return@LaunchedEffect
         offerProgress = 1f
         repeat(80) {
             delay(100)
             offerProgress = max(0f, 1f - (it + 1) / 80f)
         }
         runCatching { repo.skip(token, o.id) }
+        offersWithoutCountdownIds = offersWithoutCountdownIds + o.id
         offerRide = null
     }
 
@@ -189,7 +205,10 @@ fun DriverCityScreen(
                     0 -> DriverFeedTab(
                         feed = feed,
                         freeForOrders = freeForOrders,
-                        onItemClick = { offerRide = it }
+                        onItemClick = {
+                            offerRide = it
+                            previousFeedTopId = it.id
+                        }
                     )
                     1 -> DriverIncomeTab()
                     2 -> DriverPriorityTab()
@@ -220,97 +239,104 @@ fun DriverCityScreen(
 
         if (offerRide != null && freeForOrders && activeTrip == null) {
             val o = offerRide!!
-            Surface(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color(0x66000000))
-                    .clickable { },
-                color = Color.Transparent
-            ) {}
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(480.dp),
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                color = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                Column(
+            val showOfferCountdown = o.id !in offersWithoutCountdownIds
+            Box(Modifier.fillMaxSize()) {
+                Surface(
                     Modifier
-                        .padding(16.dp)
                         .fillMaxSize()
+                        .background(Color(0x66000000))
+                        .clickable { },
+                    color = Color.Transparent
+                ) {}
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(),
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    color = Color.White,
+                    tonalElevation = 10.dp
                 ) {
-                    Text("Новый заказ", fontWeight = FontWeight.Bold, color = Color(0xFF7E8580))
-                    Spacer(Modifier.height(8.dp))
-                    DriverNewOrderMapCard(ride = o)
-                    Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { offerProgress },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = BrandDark,
-                        trackColor = Color(0xFFE0E0E0)
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    val p = o.passenger
-                    Row {
-                        Column(Modifier.weight(0.25f)) {
-                            Surface(
-                                modifier = Modifier.size(48.dp),
-                                shape = CircleShape,
-                                color = Color(0xFFEAEAEA)
-                            ) {}
-                            Text(p?.firstName ?: "—", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("★ ${p?.ratingAvg ?: 5.0} (${p?.ridesCount ?: 0})", fontSize = 11.sp, color = Color(0xFFFFC107))
-                        }
-                        Column(Modifier.weight(0.75f).padding(start = 8.dp)) {
-                            Text(shortAddr(o.fromAddress), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(shortAddr(o.toAddress), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${o.displayPriceRub} Р", color = BrandDark, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            pendingRideId = o.id
-                            showEtaPick = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Brand)
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
-                        Text("Принять за ${o.displayPriceRub} Р")
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("Предложите свою цену:", color = Color(0xFF6C6C6C), fontSize = 13.sp)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(50, 100, 150).forEach { add ->
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        runCatching {
-                                            repo.counterOffer(token, o.id, o.displayPriceRub + add)
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Brand),
-                                contentPadding = PaddingValues(4.dp)
-                            ) {
-                                Text("${o.displayPriceRub + add} Р", fontSize = 11.sp)
+                        Text("Новый заказ", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1D2A08))
+                        Spacer(Modifier.height(8.dp))
+                        if (showOfferCountdown) {
+                            LinearProgressIndicator(
+                                progress = { offerProgress },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = BrandDark,
+                                trackColor = Color(0xFFE0E0E0)
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
+                        DriverNewOrderMapCard(ride = o)
+                        Spacer(Modifier.height(12.dp))
+                        val p = o.passenger
+                        Row {
+                            Column(Modifier.weight(0.28f)) {
+                                Surface(
+                                    modifier = Modifier.size(48.dp),
+                                    shape = CircleShape,
+                                    color = Color(0xFFEAEAEA)
+                                ) {}
+                                Text(p?.firstName ?: "—", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("★ ${p?.ratingAvg ?: 5.0} (${p?.ridesCount ?: 0})", fontSize = 11.sp, color = Color(0xFFFFC107))
+                            }
+                            Column(Modifier.weight(0.72f).padding(start = 8.dp)) {
+                                Text(shortAddr(o.fromAddress), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(shortAddr(o.toAddress), fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text("${o.displayPriceRub} Р", color = BrandDark, fontWeight = FontWeight.Bold)
                             }
                         }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                runCatching { repo.skip(token, o.id) }
-                                offerRide = null
+                        Spacer(Modifier.weight(1f, fill = true))
+                        Button(
+                            onClick = {
+                                offersWithoutCountdownIds = offersWithoutCountdownIds + o.id
+                                pendingRideId = o.id
+                                showEtaPick = true
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Brand)
+                        ) {
+                            Text("Принять за ${o.displayPriceRub} Р")
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("Предложите свою цену:", color = Color(0xFF6C6C6C), fontSize = 13.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(50, 100, 150).forEach { add ->
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            runCatching {
+                                                repo.counterOffer(token, o.id, o.displayPriceRub + add)
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Brand),
+                                    contentPadding = PaddingValues(4.dp)
+                                ) {
+                                    Text("${o.displayPriceRub + add} Р", fontSize = 11.sp)
+                                }
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0), contentColor = Color(0xFF333333))
-                    ) { Text("Пропустить") }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    offersWithoutCountdownIds = offersWithoutCountdownIds + o.id
+                                    runCatching { repo.skip(token, o.id) }
+                                    offerRide = null
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0), contentColor = Color(0xFF333333))
+                        ) { Text("Пропустить") }
+                    }
                 }
             }
         }
@@ -705,6 +731,18 @@ private fun DriverActiveTripOverlay(
     var mapView by remember { mutableStateOf<MapView?>(null) }
     val overlays = remember(ride.id) { mutableStateListOf<org.osmdroid.views.overlay.Overlay>() }
 
+    var etaRemainingSec by remember(ride.id, ride.status, ride.driverEtaMinutes) {
+        mutableStateOf(((ride.driverEtaMinutes ?: 3) * 60).coerceAtLeast(0))
+    }
+    LaunchedEffect(ride.id, ride.status, ride.driverEtaMinutes) {
+        if (ride.status != "accepted") return@LaunchedEffect
+        etaRemainingSec = ((ride.driverEtaMinutes ?: 3) * 60).coerceAtLeast(0)
+        while (etaRemainingSec > 0 && isActive) {
+            delay(1000)
+            etaRemainingSec--
+        }
+    }
+
     var pickupWaitSec by remember { mutableStateOf(0) }
     LaunchedEffect(local.status, local.id) {
         if (local.status == "at_pickup") {
@@ -744,127 +782,144 @@ private fun DriverActiveTripOverlay(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Text(
-                "Отменить поездку",
-                color = Color(0xFFE53935),
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable {
-                    scope.launch {
-                        runCatching {
-                            repo.cancelDriver(token, local.id)
-                            onCancelled()
-                        }
+            if (local.status == "accepted") {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp
+                ) {
+                    Text(
+                        "До заказчика: ${formatMmSs(etaRemainingSec)}",
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF1D2A08)
+                    )
+                }
+            }
+            if (local.passengerExiting) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    color = Color(0xFFE3F2FD),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        "Пассажир выходит к вам",
+                        modifier = Modifier.padding(12.dp),
+                        color = Color(0xFF1565C0),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            if (local.status == "at_pickup" && pickupWaitSec > 0) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    color = Color(0xFFFFF8E1),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    val mm = pickupWaitSec / 60
+                    val ss = pickupWaitSec % 60
+                    Text(
+                        "Ожидание пассажира: ${String.format("%d:%02d", mm, ss)}",
+                        modifier = Modifier.padding(12.dp),
+                        color = Color(0xFF6D4C41),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            AndroidView(
+                factory = { ctx ->
+                    MapView(ctx).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        controller.setZoom(12.0)
+                        mapView = this
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(3f)
+            )
+            Surface(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                color = Color.White,
+                tonalElevation = 8.dp
+            ) {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            "Отменить поездку",
+                            color = Color(0xFFE53935),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable {
+                                scope.launch {
+                                    runCatching {
+                                        repo.cancelDriver(token, local.id)
+                                        onCancelled()
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(shortAddr(local.fromAddress), fontWeight = FontWeight.Bold)
+                    Text(shortAddr(local.toAddress), color = Color.Gray, fontSize = 13.sp)
+                    Text("${local.displayPriceRub} Р", color = BrandDark, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(10.dp))
+                    when (local.status) {
+                        "accepted" -> Button(
+                            onClick = {
+                                scope.launch {
+                                    runCatching {
+                                        local = repo.arrived(token, local.id)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = BlueRoute)
+                        ) { Text("Я на месте") }
+                        "at_pickup" -> Button(
+                            onClick = {
+                                scope.launch {
+                                    runCatching {
+                                        local = repo.startTrip(token, local.id)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Brand)
+                        ) { Text("Начать поездку") }
+                        "in_trip" -> Button(
+                            onClick = {
+                                scope.launch {
+                                    runCatching {
+                                        repo.complete(token, local.id)
+                                        onCompleted(local.id)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Brand)
+                        ) { Text("Завершить поездку") }
                     }
                 }
-            )
-        }
-        if (local.passengerExiting) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                color = Color(0xFFE3F2FD),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text(
-                    "Пассажир выходит к вам",
-                    modifier = Modifier.padding(12.dp),
-                    color = Color(0xFF1565C0),
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
             }
-            Spacer(Modifier.height(8.dp))
-        }
-        if (local.status == "at_pickup" && pickupWaitSec > 0) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                color = Color(0xFFFFF8E1),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                val mm = pickupWaitSec / 60
-                val ss = pickupWaitSec % 60
-                Text(
-                    "Ожидание пассажира: ${String.format("%d:%02d", mm, ss)}",
-                    modifier = Modifier.padding(12.dp),
-                    color = Color(0xFF6D4C41),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-        AndroidView(
-            factory = { ctx ->
-                MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    controller.setZoom(12.0)
-                    mapView = this
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.38f)
-        )
-        Surface(
-            Modifier
-                .fillMaxWidth()
-                .weight(0.62f),
-            shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-            color = Color.White,
-            tonalElevation = 6.dp
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text(shortAddr(local.fromAddress), fontWeight = FontWeight.Bold)
-                Text(shortAddr(local.toAddress), color = Color.Gray, fontSize = 13.sp)
-                Text("${local.displayPriceRub} Р", color = BrandDark, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                when (local.status) {
-                    "accepted" -> Button(
-                        onClick = {
-                            scope.launch {
-                                runCatching {
-                                    local = repo.arrived(token, local.id)
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = BlueRoute)
-                    ) { Text("Я на месте") }
-                    "at_pickup" -> Button(
-                        onClick = {
-                            scope.launch {
-                                runCatching {
-                                    local = repo.startTrip(token, local.id)
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Brand)
-                    ) { Text("Начать поездку") }
-                    "in_trip" -> Button(
-                        onClick = {
-                            scope.launch {
-                                runCatching {
-                                    repo.complete(token, local.id)
-                                    onCompleted(local.id)
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Brand)
-                    ) { Text("Завершить поездку") }
-                }
-            }
-        }
         }
 
         DisposableEffect(ride.id) {
@@ -874,6 +929,13 @@ private fun DriverActiveTripOverlay(
             }
         }
     }
+}
+
+private fun formatMmSs(totalSec: Int): String {
+    val s = totalSec.coerceAtLeast(0)
+    val m = s / 60
+    val r = s % 60
+    return String.format("%d:%02d", m, r)
 }
 
 private fun shortAddr(s: String): String {

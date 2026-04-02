@@ -7,6 +7,7 @@ import android.location.LocationManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,13 +31,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,11 +51,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
@@ -70,9 +78,13 @@ import ru.driveeup.mobile.data.RideRepository
 import ru.driveeup.mobile.domain.RideOrder
 import ru.driveeup.mobile.domain.User
 import ru.driveeup.mobile.domain.UserRole
+import ru.driveeup.mobile.R
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
+
+private val FieldFillGray = Color(0xFFE8E8E8)
+private val BrandGreen = Color(0xFF96EA28)
 
 private val RouteLineBlue = 0xFF29B6F6.toInt()
 private val MarkerPickUp = 0xFF29B6F6.toInt()
@@ -123,6 +135,8 @@ fun CityScreen(
     var activeRide by remember { mutableStateOf<RideOrder?>(null) }
     var rateStars by remember { mutableStateOf(0) }
     var orderingBusy by remember { mutableStateOf(false) }
+    /** После «Отмена» в оценке не показываем снова, пока придёт другая поездка. */
+    var dismissedRatingRideId by remember { mutableStateOf<String?>(null) }
 
     suspend fun reverseGeocode(lat: Double, lon: Double): String {
         return withContext(Dispatchers.IO) {
@@ -276,11 +290,109 @@ fun CityScreen(
         }
     }
 
-    val searchingDrivers = activeRide?.status == "searching"
+    val needsPassengerRating =
+        activeRide != null &&
+            activeRide.status == "completed" &&
+            activeRide.driver != null &&
+            activeRide.driverRating == null &&
+            activeRide.id != dismissedRatingRideId
+
+    val tripBlocksOrderForm = activeRide != null && (
+        activeRide.status in listOf("searching", "accepted", "at_pickup", "in_trip") ||
+            needsPassengerRating
+        )
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxWidth().weight(if (searchingDrivers) 1f else 3f)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(42.dp).clickable(onClick = onOpenMenu),
+                    shape = CircleShape,
+                    color = Color.White
+                ) {
+                    Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
+                }
+                val tier = loyaltyTier(user)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable(onClick = onOpenDriveUp)
+                        .background(Color(0xFFF5F5F5))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_coin),
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Text(
+                        text = "$driveCoin",
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1D2A08)
+                    )
+                    Image(
+                        painter = painterResource(loyaltyTierIconRes(tier)),
+                        contentDescription = loyaltyTierLabel(tier),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = loyaltyTierLabel(tier),
+                        fontSize = 13.sp,
+                        color = Color(0xFF5C5C5C)
+                    )
+                }
+            }
+
+            val rideTop = activeRide
+            if (rideTop != null) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    when (rideTop.status) {
+                        "accepted" -> PassengerEtaBanner(minutes = rideTop.driverEtaMinutes ?: 3)
+                        "at_pickup" -> {
+                            if (!rideTop.passengerExiting) {
+                                PassengerAtPickupCombined(
+                                    onExitClick = {
+                                        uiScope.launch {
+                                            runCatching {
+                                                rideRepo.passengerExit(token, rideTop.id)
+                                                activeRide = rideRepo.passengerActive(token)
+                                            }
+                                        }
+                                    }
+                                )
+                            } else {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.White,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "Вы выходите к водителю",
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF1D2A08)
+                                    )
+                                }
+                            }
+                        }
+                        "in_trip" -> PassengerInTripBanner()
+                        else -> {}
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxWidth().weight(if (tripBlocksOrderForm) 1f else 3f)) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
@@ -298,59 +410,6 @@ fun CityScreen(
                         }
                     }
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        modifier = Modifier.size(42.dp).clickable(onClick = onOpenMenu),
-                        shape = CircleShape,
-                        color = Color.White
-                    ) {
-                        Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(10.dp))
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = Color.White,
-                        modifier = Modifier.clickable(onClick = onOpenDriveUp)
-                    ) {
-                        Text(
-                            text = "$driveCoin DriveCoin",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-
-                val ride = activeRide
-                if (ride != null && ride.status == "accepted") {
-                    PassengerEtaBanner(
-                        minutes = ride.driverEtaMinutes ?: 3,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                }
-                if (ride != null && ride.status == "at_pickup" && !ride.passengerExiting) {
-                    Column(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 56.dp)) {
-                        PassengerWaitingDriverBanner()
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                uiScope.launch {
-                                    runCatching {
-                                        rideRepo.passengerExit(token, ride.id)
-                                        activeRide = rideRepo.passengerActive(token)
-                                    }
-                                }
-                            },
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF96EA28))
-                        ) { Text("Я выхожу") }
-                    }
-                }
-                if (ride != null && ride.status == "in_trip") {
-                    PassengerInTripBanner(Modifier.align(Alignment.TopCenter))
-                }
 
                 Surface(
                     modifier = Modifier
@@ -396,62 +455,83 @@ fun CityScreen(
                 }
             }
 
-            if (!searchingDrivers) {
+            if (!tripBlocksOrderForm) {
             Card(
                 modifier = Modifier.fillMaxWidth().weight(2f),
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(FieldFillGray)
                             .clickable {
                                 activeField = "from"
                                 searchQuery = from
                                 fullSearchOpen = true
-                            },
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, Color(0xFFBFC8B8))
+                            }
                     ) {
                         Text(
                             text = if (from.isBlank()) "Откуда" else from,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp)
+                                .align(Alignment.CenterStart),
                             color = if (from.isBlank()) Color(0xFF8A8A8A) else Color(0xFF1F1F1F),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Surface(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(FieldFillGray)
                             .clickable {
                                 activeField = "to"
                                 searchQuery = to
                                 fullSearchOpen = true
-                            },
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, Color(0xFFBFC8B8))
+                            }
                     ) {
                         Text(
                             text = if (to.isBlank()) "Куда" else to,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp)
+                                .align(Alignment.CenterStart),
                             color = if (to.isBlank()) Color(0xFF8A8A8A) else Color(0xFF1F1F1F),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    OutlinedTextField(
+                    TextField(
                         value = price,
                         onValueChange = { v -> price = v.filter { it.isDigit() } },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Предложите цену") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp)),
+                        placeholder = { Text("Предложите цену", color = Color(0xFF8A8A8A)) },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = FieldFillGray,
+                            unfocusedContainerColor = FieldFillGray,
+                            disabledContainerColor = FieldFillGray,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF1F1F1F),
+                            unfocusedTextColor = Color(0xFF1F1F1F)
+                        )
                     )
                     Button(
                         onClick = {
@@ -478,8 +558,18 @@ fun CityScreen(
                             }
                         },
                         enabled = !orderingBusy && activeRide == null,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Заказать") }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandGreen,
+                            contentColor = Color(0xFF1D2A08)
+                        ),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Text("Заказать", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             }
@@ -523,7 +613,7 @@ fun CityScreen(
                     }
                 }
                 "completed" -> {
-                    if ((ride.driverRating == null) && ride.driver != null) {
+                    if ((ride.driverRating == null) && ride.driver != null && ride.id != dismissedRatingRideId) {
                         PassengerRateFullScreen(
                             driverName = ride.driver.firstName.ifBlank { ride.driver.email },
                             selectedStars = rateStars,
@@ -534,13 +624,14 @@ fun CityScreen(
                                         runCatching {
                                             rideRepo.rate(token, ride.id, rateStars, "driver")
                                             activeRide = null
+                                            dismissedRatingRideId = null
                                             rateStars = 0
                                         }
                                     }
                                 }
                             },
                             onCancel = {
-                                activeRide = null
+                                dismissedRatingRideId = ride.id
                                 rateStars = 0
                             }
                         )
@@ -576,12 +667,27 @@ fun CityScreen(
                             Icon(Icons.Default.Close, contentDescription = "Закрыть", modifier = Modifier.padding(10.dp), tint = Color.Gray)
                         }
                     }
-                    OutlinedTextField(
+                    TextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(if (activeField == "from") "Поиск места отправления" else "Поиск места назначения") },
-                        singleLine = true
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp)),
+                        placeholder = {
+                            Text(
+                                if (activeField == "from") "Поиск места отправления" else "Поиск места назначения",
+                                color = Color(0xFF8A8A8A)
+                            )
+                        },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = FieldFillGray,
+                            unfocusedContainerColor = FieldFillGray,
+                            disabledContainerColor = FieldFillGray,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                     LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
                         items(results) { hit ->

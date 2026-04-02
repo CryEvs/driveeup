@@ -68,11 +68,39 @@ private const val KEY_COOLDOWN_UNTIL = "cross_road_cooldown_until"
 private const val AUTH_PREFS = "driveeup_prefs"
 private const val KEY_AUTH_TOKEN = "token"
 private const val COOLDOWN_MS = 60_000L
+/** Не даём сохранить заведомо битый timestamp (секунды вместо мс, лишние нули и т.д.). */
+private const val MAX_COOLDOWN_MS = 7L * 24 * 60 * 60 * 1000
+
+private fun normalizeCooldownUntilMs(raw: Long, now: Long): Long {
+    if (raw <= 0L) return 0L
+    var u = raw
+    // Unix в секундах (≈1e9…1e10) ошибочно положили как ms
+    if (u in 1_000_000_000L..9_999_999_999L) {
+        val asMs = u * 1000L
+        if (asMs in (now - 120_000L)..(now + MAX_COOLDOWN_MS)) return asMs
+    }
+    // Лишний множитель (например ms записали как µs)
+    var guard = 0
+    while (u > now + MAX_COOLDOWN_MS && u > 1_000_000_000_000_000L && guard < 4) {
+        u /= 1000L
+        guard++
+    }
+    if (u > now + MAX_COOLDOWN_MS) {
+        return (now + COOLDOWN_MS).coerceAtMost(now + MAX_COOLDOWN_MS)
+    }
+    if (u < now - 86_400_000L * 2L) return 0L
+    return u
+}
 
 private fun cooldownRemainingMs(ctx: Context): Long {
     val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    val until = prefs.getLong(KEY_COOLDOWN_UNTIL, 0L)
-    return max(0L, until - System.currentTimeMillis())
+    val now = System.currentTimeMillis()
+    val raw = prefs.getLong(KEY_COOLDOWN_UNTIL, 0L)
+    val until = normalizeCooldownUntilMs(raw, now)
+    if (until != raw) {
+        prefs.edit().putLong(KEY_COOLDOWN_UNTIL, until).apply()
+    }
+    return max(0L, until - now)
 }
 
 private fun startCooldownNative(ctx: Context) {
@@ -223,8 +251,10 @@ fun GamesScreen(onBack: () -> Unit) {
                                                             "if(u>now){localStorage.setItem(k,String(u));}" +
                                                             "return u;}catch(e){return 0;}})()"
                                                     ) { result ->
-                                                        val u = parseEvaluateJavascriptLong(result)
-                                                        if (u > System.currentTimeMillis()) {
+                                                        val uRaw = parseEvaluateJavascriptLong(result)
+                                                        val now = System.currentTimeMillis()
+                                                        val u = normalizeCooldownUntilMs(uRaw, now)
+                                                        if (u > now) {
                                                             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                                                                 .edit()
                                                                 .putLong(KEY_COOLDOWN_UNTIL, u)

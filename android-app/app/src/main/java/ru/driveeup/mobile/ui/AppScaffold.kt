@@ -51,7 +51,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Typography
 import kotlinx.coroutines.launch
 import ru.driveeup.mobile.ui.auth.AuthScreen
 import ru.driveeup.mobile.ui.auth.AuthViewModel
@@ -89,7 +91,8 @@ fun DriveeUpAppScaffold() {
     }
 
     val colorScheme = remember(state.darkTheme) { driveeupColorScheme(state.darkTheme) }
-    MaterialTheme(colorScheme = colorScheme) {
+    val typography = remember { driveeupTypography() }
+    MaterialTheme(colorScheme = colorScheme, typography = typography) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
@@ -134,15 +137,9 @@ private fun AppContent(
     val scope = rememberCoroutineScope()
     var page by remember { mutableStateOf(AppPage.CITY) }
     val drawerBg = Color.White
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("driveeup_prefs", Context.MODE_PRIVATE) }
-    var driverUiMode by remember { mutableStateOf(prefs.getBoolean("driver_ui_mode", false)) }
 
-    LaunchedEffect(Unit) {
-        if (prefs.getBoolean("driver_ui_mode", false)) {
-            vm.setRole(UserRole.DRIVER)
-        }
-    }
+    /** Интерфейс водителя / пассажира берём из роли аккаунта на сервере, а не из локального prefs. */
+    val isDriverUi = state.user?.role == UserRole.DRIVER
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -168,14 +165,25 @@ private fun AppContent(
                             Surface(shape = CircleShape, color = Color(0xFFEAEAEA), modifier = Modifier.size(42.dp)) {
                                 Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
                             }
-                            Text(
-                                text = listOfNotNull(state.user?.firstName, state.user?.lastName)
-                                    .joinToString(" ")
-                                    .ifBlank { state.user?.email ?: "Профиль" },
+                            Column(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(start = 10.dp)
-                            )
+                            ) {
+                                Text(
+                                    text = listOfNotNull(state.user?.firstName, state.user?.lastName)
+                                        .joinToString(" ")
+                                        .ifBlank { state.user?.email ?: "Профиль" }
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("★", color = Color(0xFFFFC107))
+                                    Text(
+                                        " ${state.user?.ratingAvg ?: 5.0} (${state.user?.ridesCount ?: 0})",
+                                        color = Color(0xFF6C6C6C),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
                             Text(">", color = Color.Gray)
                         }
                         Divider(color = Color(0xFFD7D7D7))
@@ -193,9 +201,8 @@ private fun AppContent(
                         Spacer(Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                driverUiMode = !driverUiMode
-                                prefs.edit().putBoolean("driver_ui_mode", driverUiMode).apply()
-                                vm.setRole(if (driverUiMode) UserRole.DRIVER else UserRole.PASSENGER)
+                                val next = if (isDriverUi) UserRole.PASSENGER else UserRole.DRIVER
+                                vm.setRole(next)
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
@@ -203,7 +210,7 @@ private fun AppContent(
                                 contentColor = Color.White
                             )
                         ) {
-                            Text(if (driverUiMode) "Стать пассажиром" else "Стать водителем")
+                            Text(if (isDriverUi) "Стать пассажиром" else "Стать водителем")
                         }
                     }
                 }
@@ -219,7 +226,7 @@ private fun AppContent(
             ) {
                 when (page) {
                     AppPage.CITY -> {
-                        if (driverUiMode) {
+                        if (isDriverUi) {
                             DriverCityScreen(
                                 driveCoin = state.user?.driveCoin ?: 0,
                                 token = state.token,
@@ -240,7 +247,8 @@ private fun AppContent(
                     AppPage.PROFILE -> ProfileScreen(
                         user = state.user!!,
                         onChangeAvatar = onChangeAvatar,
-                        onOpenMenu = { scope.launch { drawerState.open() } }
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                        onLogout = onLogout
                     )
                     AppPage.DRIVE_UP -> DriveUpScreen(
                         user = state.user!!,
@@ -305,6 +313,29 @@ private fun PlaceholderScreen(title: String, onOpenMenu: () -> Unit) {
         Text(title, style = MaterialTheme.typography.headlineSmall)
         Text("Раздел в разработке.")
     }
+}
+
+/** На Android [FontFamily.SansSerif] соответствует Roboto. */
+private fun driveeupTypography(): Typography {
+    val f = FontFamily.SansSerif
+    val base = Typography()
+    return Typography(
+        displayLarge = base.displayLarge.copy(fontFamily = f),
+        displayMedium = base.displayMedium.copy(fontFamily = f),
+        displaySmall = base.displaySmall.copy(fontFamily = f),
+        headlineLarge = base.headlineLarge.copy(fontFamily = f),
+        headlineMedium = base.headlineMedium.copy(fontFamily = f),
+        headlineSmall = base.headlineSmall.copy(fontFamily = f),
+        titleLarge = base.titleLarge.copy(fontFamily = f),
+        titleMedium = base.titleMedium.copy(fontFamily = f),
+        titleSmall = base.titleSmall.copy(fontFamily = f),
+        bodyLarge = base.bodyLarge.copy(fontFamily = f),
+        bodyMedium = base.bodyMedium.copy(fontFamily = f),
+        bodySmall = base.bodySmall.copy(fontFamily = f),
+        labelLarge = base.labelLarge.copy(fontFamily = f),
+        labelMedium = base.labelMedium.copy(fontFamily = f),
+        labelSmall = base.labelSmall.copy(fontFamily = f)
+    )
 }
 
 private fun driveeupColorScheme(isDark: Boolean): ColorScheme {
