@@ -220,10 +220,12 @@ fun GamesScreen(onBack: () -> Unit) {
                                             webViewClient = object : WebViewClient() {
                                                 override fun onPageFinished(view: WebView?, url: String?) {
                                                     super.onPageFinished(view, url)
-                                                    val prefsUntil = ctx.getSharedPreferences(
+                                                    val now = System.currentTimeMillis()
+                                                    val rawPrefsUntil = ctx.getSharedPreferences(
                                                         PREFS,
                                                         Context.MODE_PRIVATE
                                                     ).getLong(KEY_COOLDOWN_UNTIL, 0L)
+                                                    val prefsUntil = normalizeCooldownUntilMs(rawPrefsUntil, now)
                                                     val authToken = ctx.getSharedPreferences(
                                                         AUTH_PREFS,
                                                         Context.MODE_PRIVATE
@@ -252,13 +254,23 @@ fun GamesScreen(onBack: () -> Unit) {
                                                             "return u;}catch(e){return 0;}})()"
                                                     ) { result ->
                                                         val uRaw = parseEvaluateJavascriptLong(result)
-                                                        val now = System.currentTimeMillis()
                                                         val u = normalizeCooldownUntilMs(uRaw, now)
                                                         if (u > now) {
                                                             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                                                                 .edit()
                                                                 .putLong(KEY_COOLDOWN_UNTIL, u)
                                                                 .apply()
+                                                            // Важно: сайт читает cooldown из localStorage.
+                                                            // Если сразу записали "битое" число, нужно перезаписать локалку нормализованным временем.
+                                                            view?.post {
+                                                                view.evaluateJavascript(
+                                                                    "(function(){try{" +
+                                                                        "localStorage.setItem('" + LS_COOLDOWN_KEY + "',String(" + u + "));" +
+                                                                        "try{sessionStorage.setItem('" + LS_COOLDOWN_KEY + "',String(" + u + "));}catch(e){}" +
+                                                                        "}catch(e){}return true;})()",
+                                                                    null
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }

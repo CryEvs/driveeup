@@ -2,6 +2,8 @@ package ru.driveeup.mobile.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +16,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -45,6 +53,9 @@ private val BrandGreen = Color(0xFF96EA28)
 
 private val ReyvoHeroBottomRadius = 22.dp
 private val TierIconDp = 36.dp
+private val BrandCornerRadius = 16.dp
+
+private const val OpenAllGrayAlpha = 0.55f
 
 @Composable
 fun DriveUpScreen(
@@ -56,6 +67,8 @@ fun DriveUpScreen(
 ) {
     val displayName = user.firstName?.takeIf { it.isNotBlank() }
         ?: user.email.substringBefore("@").ifBlank { "друг" }
+
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
@@ -105,7 +118,8 @@ fun DriveUpScreen(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.Top
         ) {
             Box(
@@ -131,7 +145,7 @@ fun DriveUpScreen(
                 Column(
                     modifier = Modifier
                         .matchParentSize()
-                        .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 10.dp),
+                        .padding(start = 36.dp, end = 36.dp, top = 20.dp, bottom = 10.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
@@ -177,14 +191,12 @@ fun DriveUpScreen(
                 }
             }
 
-                Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                .background(Color.White)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 DriveUpLoyaltySection(user = user)
@@ -196,6 +208,15 @@ fun DriveUpScreen(
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 DriveUpNextRideBenefitCard(tier = loyaltyTierFromRides(user.ridesCount))
+
+                DriveUpSpendCoinsSection(
+                    onOpenAll = { /* TODO: later user will describe */ }
+                )
+
+                DriveUpTasksSection(
+                    onOpenAll = { /* TODO: later user will describe */ }
+                )
+
                 Button(
                     onClick = onOpenGames,
                     modifier = Modifier.fillMaxWidth(),
@@ -328,7 +349,7 @@ private fun LoyaltyTierIconsWithProgress(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.CenterVertically)
+                .align(Alignment.Center)
                 .padding(horizontal = halfIcon)
                 .zIndex(0f),
             verticalAlignment = Alignment.CenterVertically
@@ -355,7 +376,7 @@ private fun LoyaltyTierIconsWithProgress(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.CenterVertically)
+                .align(Alignment.Center)
                 .zIndex(1f),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -401,5 +422,270 @@ private fun DriveUpNextRideBenefitCard(tier: LoyaltyTier) {
             fontSize = 15.sp,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+private data class SpendCoinItem(
+    val id: String,
+    val iconRes: Int,
+    val description: String,
+    val priceCoins: Long
+)
+
+private data class LoyaltyTaskItem(
+    val id: String,
+    val rewardCoins: Long,
+    val title: String,
+    val description: String
+)
+
+/**
+ * Заглушки до подключения админ-API:
+ * - администратор будет задавать список товаров/заданий
+ * - в UI должен подставиться их icon/описания/стоимость/награды
+ */
+private val dummySpendItems = listOf(
+    SpendCoinItem(
+        id = "s1",
+        iconRes = R.drawable.ic_coin,
+        description = "Промо-предмет для твоего прогресса",
+        priceCoins = 250
+    ),
+    SpendCoinItem(
+        id = "s2",
+        iconRes = R.drawable.ic_coin,
+        description = "Дополнительный буст для поездок",
+        priceCoins = 500
+    )
+)
+
+private val dummyTasks = listOf(
+    LoyaltyTaskItem(
+        id = "t1",
+        rewardCoins = 120,
+        title = "Прокатиcь 1 раз",
+        description = "Сделай одну поездку в DriveUP."
+    ),
+    LoyaltyTaskItem(
+        id = "t2",
+        rewardCoins = 300,
+        title = "Прокатиcь 3 раза",
+        description = "Собери серию и получи награду."
+    ),
+    LoyaltyTaskItem(
+        id = "t3",
+        rewardCoins = 650,
+        title = "Прокатиcь 5 раз",
+        description = "Заверши серию поездок и забери монеты."
+    )
+)
+
+@Composable
+private fun DriveUpHeaderRow(
+    title: String,
+    onOpenAll: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            color = Color(0xFF1D2A08),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = "Открыть все",
+            color = Color.Gray.copy(alpha = OpenAllGrayAlpha),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable(onClick = onOpenAll)
+        )
+    }
+}
+
+@Composable
+private fun DriveUpSpendCoinsSection(
+    onOpenAll: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        DriveUpHeaderRow(title = "Потратить ДрайвКойны", onOpenAll = onOpenAll)
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp)
+        ) {
+            items(dummySpendItems) { item ->
+                SpendCoinCard(item = item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpendCoinCard(item: SpendCoinItem) {
+    val cardHeightDp = 300.dp
+    Card(
+        modifier = Modifier
+            .width(230.dp)
+            .heightIn(min = cardHeightDp),
+        shape = RoundedCornerShape(BrandCornerRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(cardHeightDp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(item.iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(90.dp)
+                )
+            }
+
+            Text(
+                text = item.description,
+                color = Color.Gray,
+                fontSize = 12.sp,
+                maxLines = 3
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_coin),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = item.priceCoins.toString(),
+                    color = Color(0xFF1D2A08),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Button(
+                onClick = { /* TODO: buy action */ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = BrandGreen,
+                    contentColor = Color(0xFF1D2A08)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(text = "Купить", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveUpTasksSection(
+    onOpenAll: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        DriveUpHeaderRow(title = "Задания", onOpenAll = onOpenAll)
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp)
+        ) {
+            items(dummyTasks) { task ->
+                LoyaltyTaskCard(task = task)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoyaltyTaskCard(task: LoyaltyTaskItem) {
+    Card(
+        modifier = Modifier
+            .width(185.dp)
+            .height(200.dp),
+        shape = RoundedCornerShape(BrandCornerRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        border = BorderStroke(2.dp, BrandGreen)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(R.drawable.zad_bg),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.FillBounds
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.Top
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Награда:",
+                        color = Color(0xFF1D2A08),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Image(
+                        painter = painterResource(R.drawable.ic_coin),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = task.rewardCoins.toString(),
+                        color = Color(0xFF1D2A08),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                Text(
+                    text = task.title,
+                    color = Color(0xFF1D2A08),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = task.description,
+                    color = Color.Gray.copy(alpha = 0.9f),
+                    fontSize = 12.sp,
+                    maxLines = 4
+                )
+            }
+        }
     }
 }
