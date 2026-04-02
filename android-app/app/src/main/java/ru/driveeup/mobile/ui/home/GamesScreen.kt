@@ -52,6 +52,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
+import ru.driveeup.mobile.data.RideRepository
+import ru.driveeup.mobile.domain.UserRole
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -126,10 +128,16 @@ private fun parseEvaluateJavascriptLong(raw: String?): Long {
 /** Как страница «Игры» на driveeup.ru: одна карточка-превью, без описания под ней. */
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
-fun GamesScreen(onBack: () -> Unit) {
+fun GamesScreen(
+    token: String,
+    userRole: UserRole,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
+    val rideRepo = remember { RideRepository() }
     var showGame by remember { mutableStateOf(false) }
     var cooldownMs by remember { mutableStateOf(cooldownRemainingMs(context)) }
+    var waitingTaxi by remember { mutableStateOf(false) }
 
     fun closeGameDialog() {
         startCooldownNative(context)
@@ -140,6 +148,18 @@ fun GamesScreen(onBack: () -> Unit) {
         while (true) {
             cooldownMs = cooldownRemainingMs(context)
             delay(500)
+        }
+    }
+
+    LaunchedEffect(token, userRole) {
+        if (token.isBlank() || userRole != UserRole.PASSENGER) {
+            waitingTaxi = false
+            return@LaunchedEffect
+        }
+        while (true) {
+            val active = runCatching { rideRepo.passengerActive(token) }.getOrNull()
+            waitingTaxi = active?.status in listOf("searching", "accepted", "at_pickup")
+            delay(2500)
         }
     }
 
@@ -165,7 +185,8 @@ fun GamesScreen(onBack: () -> Unit) {
         }
         CrossRoadGameCard(
             cooldownMs = cooldownMs,
-            onPlay = { if (cooldownMs <= 0) showGame = true },
+            onPlay = { if (cooldownMs <= 0 && waitingTaxi) showGame = true },
+            waitingTaxi = waitingTaxi,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 52.dp)
@@ -330,10 +351,12 @@ fun GamesScreen(onBack: () -> Unit) {
 @Composable
 private fun CrossRoadGameCard(
     cooldownMs: Long,
+    waitingTaxi: Boolean,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val onCooldown = cooldownMs > 0
+    val playable = waitingTaxi && !onCooldown
     val previewBg = Brush.linearGradient(
         colorStops = arrayOf(
             0f to Color(0xFF1E3A1A),
@@ -411,10 +434,19 @@ private fun CrossRoadGameCard(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(bottom = 10.dp)
                         )
+                    } else if (!waitingTaxi) {
+                        Text(
+                            text = "Игры доступны только при заказе и ожидании такси",
+                            color = Color(0xFFE8F5D0),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 10.dp)
+                        )
                     }
                     Button(
                         onClick = onPlay,
-                        enabled = !onCooldown,
+                        enabled = playable,
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 320.dp),

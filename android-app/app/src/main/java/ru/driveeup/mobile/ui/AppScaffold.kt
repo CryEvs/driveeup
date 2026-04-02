@@ -62,11 +62,13 @@ import ru.driveeup.mobile.domain.UserRole
 import ru.driveeup.mobile.ui.home.CityScreen
 import ru.driveeup.mobile.ui.home.DriverCityScreen
 import ru.driveeup.mobile.ui.home.DriveUpScreen
+import ru.driveeup.mobile.ui.home.DriveUpStoreAllScreen
+import ru.driveeup.mobile.ui.home.DriveUpTasksAllScreen
 import ru.driveeup.mobile.ui.home.GamesScreen
 import ru.driveeup.mobile.ui.home.ProfileScreen
 
 enum class AppPage {
-    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, PROFILE, GAMES, BATTLE_PASS
+    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, DRIVE_UP_STORE_ALL, DRIVE_UP_TASKS_ALL, PROFILE, GAMES, BATTLE_PASS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -252,11 +254,30 @@ private fun AppContent(
                     )
                     AppPage.DRIVE_UP -> DriveUpScreen(
                         user = state.user!!,
+                        token = state.token,
                         onOpenMenu = { scope.launch { drawerState.open() } },
                         onOpenGames = { page = AppPage.GAMES },
-                        onOpenBattlePass = { page = AppPage.BATTLE_PASS }
+                        onOpenBattlePass = { page = AppPage.BATTLE_PASS },
+                        onOpenStoreAll = { page = AppPage.DRIVE_UP_STORE_ALL },
+                        onOpenTasksAll = { page = AppPage.DRIVE_UP_TASKS_ALL }
                     )
-                    AppPage.GAMES -> GamesScreen(onBack = { page = AppPage.DRIVE_UP })
+                    AppPage.DRIVE_UP_STORE_ALL -> DriveUpStoreAllScreen(
+                        user = state.user!!,
+                        token = state.token,
+                        onBack = { page = AppPage.DRIVE_UP },
+                        onMenuBack = { scope.launch { drawerState.open() } }
+                    )
+                    AppPage.DRIVE_UP_TASKS_ALL -> DriveUpTasksAllScreen(
+                        user = state.user!!,
+                        token = state.token,
+                        onBack = { page = AppPage.DRIVE_UP },
+                        onMenuBack = { scope.launch { drawerState.open() } }
+                    )
+                    AppPage.GAMES -> GamesScreen(
+                        token = state.token,
+                        userRole = state.user?.role ?: UserRole.PASSENGER,
+                        onBack = { page = AppPage.DRIVE_UP }
+                    )
                     AppPage.BATTLE_PASS -> BattlePassScreen(
                         token = state.token,
                         onBack = { page = AppPage.DRIVE_UP }

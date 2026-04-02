@@ -243,9 +243,9 @@ function Dashboard({ auth }) {
           <Route path="/admin" element={<AdminPanelPage token={auth.token} user={auth.user} />} />
           <Route path="/admin/users" element={<AdminUsersPage user={auth.user} />} />
           <Route path="/admin/rides" element={<AdminRidesPage user={auth.user} />} />
-          <Route path="/admin/loyalty" element={<AdminLoyaltyPage user={auth.user} />} />
-          <Route path="/admin/store" element={<AdminStorePage user={auth.user} />} />
-          <Route path="/admin/tasks" element={<AdminTasksPage user={auth.user} />} />
+          <Route path="/admin/loyalty" element={<AdminLoyaltyPage token={auth.token} user={auth.user} />} />
+          <Route path="/admin/store" element={<AdminStorePage token={auth.token} user={auth.user} />} />
+          <Route path="/admin/tasks" element={<AdminTasksPage token={auth.token} user={auth.user} />} />
         </Routes>
       </section>
     </main>

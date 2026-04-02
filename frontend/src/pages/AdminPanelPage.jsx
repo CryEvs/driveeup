@@ -60,19 +60,16 @@ export function AdminPanelPage({ token, user }) {
           title="Лояльность"
           to="/admin/loyalty"
           description="Тиры, пороги, прогресс и привилегии."
-          comingSoon
         />
         <AdminCard
           title="Магазин за DriveCoin"
           to="/admin/store"
           description="Товары и покупка."
-          comingSoon
         />
         <AdminCard
           title="Задания"
           to="/admin/tasks"
           description="Порождение заданий и награды."
-          comingSoon
         />
       </div>
     </section>

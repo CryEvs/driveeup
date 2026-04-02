@@ -1,26 +1,25 @@
 package ru.driveeup.mobile.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,16 +28,21 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -46,651 +50,414 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import ru.driveeup.mobile.R
+import ru.driveeup.mobile.data.DriveUpRepository
+import ru.driveeup.mobile.domain.DriveUpContent
+import ru.driveeup.mobile.domain.DriveUpStoreItem
+import ru.driveeup.mobile.domain.DriveUpTaskItem
 import ru.driveeup.mobile.domain.User
 
 private val BrandGreen = Color(0xFF96EA28)
-
+private val DriveUpDarkBg = Color(0xFF171918)
 private val ReyvoHeroBottomRadius = 22.dp
-private val TierIconDp = 36.dp
 private val BrandCornerRadius = 16.dp
-
-private const val OpenAllGrayAlpha = 0.55f
 
 @Composable
 fun DriveUpScreen(
     user: User,
+    token: String,
     onOpenMenu: () -> Unit,
     onOpenGames: () -> Unit,
     onOpenBattlePass: () -> Unit,
+    onOpenStoreAll: () -> Unit,
+    onOpenTasksAll: () -> Unit,
     onNotifications: () -> Unit = {}
 ) {
-    val displayName = user.firstName?.takeIf { it.isNotBlank() }
-        ?: user.email.substringBefore("@").ifBlank { "друг" }
+    val repo = remember { DriveUpRepository() }
+    var content by remember { mutableStateOf<DriveUpContent?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var selectedItem by remember { mutableStateOf<DriveUpStoreItem?>(null) }
+    val displayName = user.firstName.takeIf { it.isNotBlank() } ?: user.email.substringBefore("@").ifBlank { "друг" }
 
-    val scrollState = rememberScrollState()
+    LaunchedEffect(token) {
+        loading = true
+        content = runCatching { repo.content(token) }.getOrNull()
+        loading = false
+    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Black)
-                .heightIn(min = 44.dp)
-                .padding(horizontal = 0.dp, vertical = 0.dp),
-            verticalAlignment = Alignment.CenterVertically
+    val currentCoin = content?.driveCoin ?: user.driveCoin
+    val items = content?.storeItems ?: emptyList()
+    val tasks = content?.tasks ?: emptyList()
+    val rides = content?.ridesCount ?: user.ridesCount
+    val tier = loyaltyTierFromRides(rides)
+    val nextRideBenefit = content?.nextRideBenefitForTier?.takeIf { it.isNotBlank() } ?: loyaltyTierRideBenefit(tier)
+
+    Column(Modifier.fillMaxSize().background(Color.White)) {
+        DriveUpTopBar(onBack = onOpenMenu, onNotifications = onNotifications)
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         ) {
-            IconButton(
-                onClick = onOpenMenu,
-                modifier = Modifier.size(40.dp)
+            HeroSection(displayName = displayName, driveCoin = currentCoin)
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .background(Color.White).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Меню",
-                    tint = BrandGreen,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Image(
-                painter = painterResource(R.drawable.ic_logo_driveup),
-                contentDescription = "DriveUP",
-                modifier = Modifier
-                    .height(18.dp)
-                    .padding(start = 2.dp),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(Modifier.weight(1f))
-            IconButton(
-                onClick = onNotifications,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_notify),
-                    contentDescription = "Уведомления",
-                    modifier = Modifier.size(24.dp)
-                )
+                DriveUpLoyaltySection(tier = tier, ridesCount = rides)
+                Text("К следующей поездке применится:", color = Color(0xFF1D2A08), fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                NextRideBenefitCard(nextRideBenefit)
+
+                SectionHeader(title = "Потратить ДрайвКойны", onOpenAll = onOpenStoreAll)
+                if (loading) {
+                    CircularProgressIndicator(color = BrandGreen)
+                } else {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                        items(items.take(8)) { item -> StoreItemCard(item = item, onClick = { selectedItem = item }) }
+                    }
+                }
+
+                SectionHeader(title = "Задания", onOpenAll = onOpenTasksAll)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                    items(tasks.take(8)) { task -> TaskCard(task) }
+                }
+
+                Button(onClick = onOpenGames, modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandGreen, contentColor = Color(0xFF1D2A08)),
+                    shape = RoundedCornerShape(12.dp)) { Text("Игры", fontWeight = FontWeight.SemiBold) }
+                Button(onClick = onOpenBattlePass, modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF0F0F0), contentColor = Color(0xFF1D2A08)),
+                    shape = RoundedCornerShape(12.dp)) { Text("Батл-Пасс", fontWeight = FontWeight.SemiBold) }
             }
         }
+    }
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-2).dp)
-                    .clip(
-                        RoundedCornerShape(
-                            bottomStart = ReyvoHeroBottomRadius,
-                            bottomEnd = ReyvoHeroBottomRadius
-                        )
-                    )
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.reyvo_hello),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter),
-                    contentScale = ContentScale.FillWidth,
-                    alignment = Alignment.TopCenter
-                )
-                Column(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .padding(start = 36.dp, end = 36.dp, top = 20.dp, bottom = 10.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Привет, $displayName!",
-                        color = Color.Black,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "На твоем счету: ",
-                                color = Color(0xFF1D2A08),
-                                fontSize = 15.sp
-                            )
-                            Image(
-                                painter = painterResource(R.drawable.ic_coin),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = " ${user.driveCoin} ",
-                                color = Color(0xFF1D2A08),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "койнов.",
-                                color = Color(0xFF1D2A08),
-                                fontSize = 15.sp
-                            )
-                        }
+    if (selectedItem != null) {
+        StoreItemDialog(
+            item = selectedItem!!,
+            onDismiss = { selectedItem = null },
+            onBuy = { selectedItem = null /* TODO purchase API */ }
+        )
+    }
+}
+
+@Composable
+fun DriveUpStoreAllScreen(
+    user: User,
+    token: String,
+    onBack: () -> Unit,
+    onMenuBack: () -> Unit,
+    onNotifications: () -> Unit = {}
+) {
+    val repo = remember { DriveUpRepository() }
+    var items by remember { mutableStateOf<List<DriveUpStoreItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var selectedItem by remember { mutableStateOf<DriveUpStoreItem?>(null) }
+    var coin by remember { mutableStateOf(user.driveCoin) }
+
+    LaunchedEffect(token) {
+        loading = true
+        runCatching {
+            val c = repo.content(token)
+            items = c.storeItems
+            coin = c.driveCoin
+        }
+        loading = false
+    }
+
+    DarkListBase(
+        driveCoin = coin,
+        title = "Потратить ДрайвКойны",
+        onTitleBack = onBack,
+        onMenuBack = onMenuBack,
+        onNotifications = onNotifications
+    ) {
+        if (loading) {
+            item { CircularProgressIndicator(color = BrandGreen) }
+        } else {
+            val rows = items.chunked(2)
+            items(rows) { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StoreItemCard(row[0], onClick = { selectedItem = row[0] }, modifier = Modifier.weight(1f))
+                    if (row.size > 1) {
+                        StoreItemCard(row[1], onClick = { selectedItem = row[1] }, modifier = Modifier.weight(1f))
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
                 }
             }
+        }
+    }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DriveUpLoyaltySection(user = user)
-                Text(
-                    text = "К следующей поездке применится:",
-                    color = Color(0xFF1D2A08),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-                DriveUpNextRideBenefitCard(tier = loyaltyTierFromRides(user.ridesCount))
+    if (selectedItem != null) {
+        StoreItemDialog(item = selectedItem!!, onDismiss = { selectedItem = null }, onBuy = { selectedItem = null })
+    }
+}
 
-                DriveUpSpendCoinsSection(
-                    onOpenAll = { /* TODO: later user will describe */ }
-                )
+@Composable
+fun DriveUpTasksAllScreen(
+    user: User,
+    token: String,
+    onBack: () -> Unit,
+    onMenuBack: () -> Unit,
+    onNotifications: () -> Unit = {}
+) {
+    val repo = remember { DriveUpRepository() }
+    var tasks by remember { mutableStateOf<List<DriveUpTaskItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var coin by remember { mutableStateOf(user.driveCoin) }
+    LaunchedEffect(token) {
+        loading = true
+        runCatching {
+            val c = repo.content(token)
+            tasks = c.tasks
+            coin = c.driveCoin
+        }
+        loading = false
+    }
 
-                DriveUpTasksSection(
-                    onOpenAll = { /* TODO: later user will describe */ }
-                )
-
-                Button(
-                    onClick = onOpenGames,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BrandGreen,
-                        contentColor = Color(0xFF1D2A08)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Игры", fontWeight = FontWeight.SemiBold)
+    DarkListBase(
+        driveCoin = coin,
+        title = "Выполнить задания",
+        onTitleBack = onBack,
+        onMenuBack = onMenuBack,
+        onNotifications = onNotifications
+    ) {
+        if (loading) {
+            item { CircularProgressIndicator(color = BrandGreen) }
+        } else {
+            val rows = tasks.chunked(2)
+            items(rows) { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TaskCard(row[0], modifier = Modifier.weight(1f))
+                    if (row.size > 1) {
+                        TaskCard(row[1], modifier = Modifier.weight(1f))
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
-                Button(
-                    onClick = onOpenBattlePass,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF0F0F0),
-                        contentColor = Color(0xFF1D2A08)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Батл-Пасс", fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
 @Composable
-private fun DriveUpLoyaltySection(user: User) {
-    val rides = user.ridesCount
-    val tier = loyaltyTierFromRides(rides)
-    val remaining = ridesUntilNextTier(rides)
-    val pBronzeSilver = progressBronzeToSilverBar(rides)
-    val pSilverGold = progressSilverToGoldBar(rides)
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Image(
-            painter = painterResource(R.drawable.loality_bg),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter),
-            contentScale = ContentScale.FillWidth
+private fun DarkListBase(
+    driveCoin: Long,
+    title: String,
+    onTitleBack: () -> Unit,
+    onMenuBack: () -> Unit,
+    onNotifications: () -> Unit,
+    content: @Composable androidx.compose.foundation.lazy.LazyListScope.() -> Unit
+) {
+    Column(Modifier.fillMaxSize().background(DriveUpDarkBg)) {
+        DriveUpTopBar(onBack = onMenuBack, onNotifications = onNotifications, dark = true)
+        Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("На твоем счету: ", color = Color(0xFF1D2A08))
+                Image(painterResource(R.drawable.ic_coin), contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(" $driveCoin койнов.", color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onTitleBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White) }
+            Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            content = content
         )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Поздравляем! Твой уровень:",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = loyaltyTierLabel(tier),
-                        color = Color.White,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+    }
+}
+
+@Composable
+private fun DriveUpTopBar(
+    onBack: () -> Unit,
+    onNotifications: () -> Unit,
+    dark: Boolean = true
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().background(if (dark) DriveUpDarkBg else Color.Black),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(22.dp))
+        }
+        Image(painterResource(R.drawable.ic_logo_driveup), contentDescription = "DriveUP", modifier = Modifier.height(18.dp), contentScale = ContentScale.Fit)
+        Spacer(Modifier.weight(1f))
+        IconButton(onClick = onNotifications, modifier = Modifier.size(40.dp)) {
+            Image(painterResource(R.drawable.ic_notify), contentDescription = "Уведомления", modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun HeroSection(displayName: String, driveCoin: Long) {
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = ReyvoHeroBottomRadius, bottomEnd = ReyvoHeroBottomRadius))) {
+        Image(painterResource(R.drawable.reyvo_hello), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+        Column(Modifier.matchParentSize().padding(start = 36.dp, end = 36.dp, top = 20.dp, bottom = 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text("Привет, $displayName!", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Surface(shape = RoundedCornerShape(14.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("На твоем счету: ", color = Color(0xFF1D2A08), fontSize = 15.sp)
+                    Image(painterResource(R.drawable.ic_coin), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text(" $driveCoin ", color = Color(0xFF1D2A08), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("койнов.", color = Color(0xFF1D2A08), fontSize = 15.sp)
                 }
-                Image(
-                    painter = painterResource(loyaltyTierIconRes(tier)),
-                    contentDescription = loyaltyTierLabel(tier),
-                    modifier = Modifier
-                        .size(56.dp)
-                        .padding(start = 8.dp)
-                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveUpLoyaltySection(tier: LoyaltyTier, ridesCount: Long) {
+    val remaining = ridesUntilNextTier(ridesCount)
+    val p1 = progressBronzeToSilverBar(ridesCount)
+    val p2 = progressSilverToGoldBar(ridesCount)
+    Box(Modifier.fillMaxWidth()) {
+        Image(painterResource(R.drawable.loality_bg), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text("Поздравляем! Твой уровень:", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(loyaltyTierLabel(tier), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                }
+                Image(painterResource(loyaltyTierIconRes(tier)), contentDescription = loyaltyTierLabel(tier), modifier = Modifier.size(56.dp))
             }
             Spacer(Modifier.height(8.dp))
             if (remaining != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.reyvo_run),
-                        contentDescription = null,
-                        modifier = Modifier.height(52.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(
-                        text = ridesUntilNextLevelPhrase(remaining),
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        lineHeight = 18.sp,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 10.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(painterResource(R.drawable.reyvo_run), contentDescription = null, modifier = Modifier.height(52.dp))
+                    Text(ridesUntilNextLevelPhrase(remaining), color = Color.White, modifier = Modifier.padding(start = 10.dp))
                 }
-            } else {
-                Text(
-                    text = "Вы на максимальном уровне лояльности!",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
             Spacer(Modifier.height(6.dp))
-            LoyaltyTierIconsWithProgress(
-                pBronzeSilver = pBronzeSilver,
-                pSilverGold = pSilverGold
-            )
-        }
-    }
-}
-
-/** Полосы прогресса на одной линии с иконками; линия проходит под иконками (иконки сверху). */
-@Composable
-private fun LoyaltyTierIconsWithProgress(
-    pBronzeSilver: Float,
-    pSilverGold: Float
-) {
-    val icon = TierIconDp
-    val halfIcon = icon / 2
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center)
-                .padding(horizontal = halfIcon)
-                .zIndex(0f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            LinearProgressIndicator(
-                progress = { pBronzeSilver },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(7.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = BrandGreen,
-                trackColor = Color(0x66FFFFFF)
-            )
-            LinearProgressIndicator(
-                progress = { pSilverGold },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(7.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = BrandGreen,
-                trackColor = Color(0x66FFFFFF)
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center)
-                .zIndex(1f),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(R.drawable.loyalty_bronze),
-                contentDescription = "Бронза",
-                modifier = Modifier.size(icon)
-            )
-            Image(
-                painter = painterResource(R.drawable.loyalty_silver),
-                contentDescription = "Серебро",
-                modifier = Modifier.size(icon)
-            )
-            Image(
-                painter = painterResource(R.drawable.loyalty_gold),
-                contentDescription = "Золото",
-                modifier = Modifier.size(icon)
-            )
-        }
-    }
-}
-
-@Composable
-private fun DriveUpNextRideBenefitCard(tier: LoyaltyTier) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Image(
-            painter = painterResource(R.drawable.loality_bg2),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter),
-            contentScale = ContentScale.FillWidth
-        )
-        Text(
-            text = loyaltyTierRideBenefit(tier),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp)
-                .align(Alignment.Center),
-            color = BrandGreen,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-private data class SpendCoinItem(
-    val id: String,
-    val iconRes: Int,
-    val description: String,
-    val priceCoins: Long
-)
-
-private data class LoyaltyTaskItem(
-    val id: String,
-    val rewardCoins: Long,
-    val title: String,
-    val description: String
-)
-
-/**
- * Заглушки до подключения админ-API:
- * - администратор будет задавать список товаров/заданий
- * - в UI должен подставиться их icon/описания/стоимость/награды
- */
-private val dummySpendItems = listOf(
-    SpendCoinItem(
-        id = "s1",
-        iconRes = R.drawable.ic_coin,
-        description = "Промо-предмет для твоего прогресса",
-        priceCoins = 250
-    ),
-    SpendCoinItem(
-        id = "s2",
-        iconRes = R.drawable.ic_coin,
-        description = "Дополнительный буст для поездок",
-        priceCoins = 500
-    )
-)
-
-private val dummyTasks = listOf(
-    LoyaltyTaskItem(
-        id = "t1",
-        rewardCoins = 120,
-        title = "Прокатиcь 1 раз",
-        description = "Сделай одну поездку в DriveUP."
-    ),
-    LoyaltyTaskItem(
-        id = "t2",
-        rewardCoins = 300,
-        title = "Прокатиcь 3 раза",
-        description = "Собери серию и получи награду."
-    ),
-    LoyaltyTaskItem(
-        id = "t3",
-        rewardCoins = 650,
-        title = "Прокатиcь 5 раз",
-        description = "Заверши серию поездок и забери монеты."
-    )
-)
-
-@Composable
-private fun DriveUpHeaderRow(
-    title: String,
-    onOpenAll: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            color = Color(0xFF1D2A08),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.weight(1f))
-        Text(
-            text = "Открыть все",
-            color = Color.Gray.copy(alpha = OpenAllGrayAlpha),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.clickable(onClick = onOpenAll)
-        )
-    }
-}
-
-@Composable
-private fun DriveUpSpendCoinsSection(
-    onOpenAll: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        DriveUpHeaderRow(title = "Потратить ДрайвКойны", onOpenAll = onOpenAll)
-
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp)
-        ) {
-            items(dummySpendItems) { item ->
-                SpendCoinCard(item = item)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.loyalty_bronze), null, modifier = Modifier.size(36.dp))
+                LinearProgressIndicator(progress = { p1 }, modifier = Modifier.weight(1f).padding(horizontal = 4.dp).height(7.dp), color = BrandGreen, trackColor = Color(0x66FFFFFF))
+                Image(painterResource(R.drawable.loyalty_silver), null, modifier = Modifier.size(36.dp))
+                LinearProgressIndicator(progress = { p2 }, modifier = Modifier.weight(1f).padding(horizontal = 4.dp).height(7.dp), color = BrandGreen, trackColor = Color(0x66FFFFFF))
+                Image(painterResource(R.drawable.loyalty_gold), null, modifier = Modifier.size(36.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SpendCoinCard(item: SpendCoinItem) {
-    val cardHeightDp = 300.dp
+private fun NextRideBenefitCard(text: String) {
+    Box(Modifier.fillMaxWidth()) {
+        Image(painterResource(R.drawable.loality_bg2), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+        Text(text, modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp), color = BrandGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, onOpenAll: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = Color(0xFF1D2A08), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.weight(1f))
+        Text("Открыть все", color = Color.Gray, modifier = Modifier.clickable(onClick = onOpenAll))
+    }
+}
+
+@Composable
+private fun StoreItemCard(item: DriveUpStoreItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier
-            .width(230.dp)
-            .heightIn(min = cardHeightDp),
+        modifier = modifier.width(230.dp).height(300.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(BrandCornerRadius),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(cardHeightDp)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(item.iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(90.dp)
-                )
+        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Image(painterResource(R.drawable.ic_coin), contentDescription = null, modifier = Modifier.size(90.dp))
             }
-
-            Text(
-                text = item.description,
-                color = Color.Gray,
-                fontSize = 12.sp,
-                maxLines = 3
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_coin),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
+            Text(item.shortDescription.ifBlank { item.name }, color = Color.Gray, fontSize = 12.sp, maxLines = 3)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.ic_coin), null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    text = item.priceCoins.toString(),
-                    color = Color(0xFF1D2A08),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text(item.priceDriveCoin.toString(), color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold)
             }
-
-            Button(
-                onClick = { /* TODO: buy action */ },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BrandGreen,
-                    contentColor = Color(0xFF1D2A08)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(text = "Купить", fontWeight = FontWeight.SemiBold)
+            Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = BrandGreen, contentColor = Color(0xFF1D2A08)), shape = RoundedCornerShape(12.dp)) {
+                Text("Купить", fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
 
 @Composable
-private fun DriveUpTasksSection(
-    onOpenAll: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        DriveUpHeaderRow(title = "Задания", onOpenAll = onOpenAll)
-
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp)
-        ) {
-            items(dummyTasks) { task ->
-                LoyaltyTaskCard(task = task)
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoyaltyTaskCard(task: LoyaltyTaskItem) {
+private fun TaskCard(task: DriveUpTaskItem, modifier: Modifier = Modifier) {
     Surface(
-        modifier = Modifier
-            .width(185.dp)
-            .height(200.dp),
+        modifier = modifier.width(185.dp).height(200.dp),
         shape = RoundedCornerShape(BrandCornerRadius),
         border = BorderStroke(2.dp, BrandGreen),
         shadowElevation = 6.dp,
-        tonalElevation = 0.dp,
         color = Color.White
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(BrandCornerRadius))
-        ) {
-            Image(
-                painter = painterResource(R.drawable.zad_bg),
-                contentDescription = null,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.FillBounds
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.Top
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Награда:",
-                        color = Color(0xFF1D2A08),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+        Box(Modifier.fillMaxSize()) {
+            Image(painterResource(R.drawable.zad_bg), null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.FillBounds)
+            Column(Modifier.fillMaxSize().padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Награда:", color = Color(0xFF1D2A08), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(6.dp))
-                    Image(
-                        painter = painterResource(R.drawable.ic_coin),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
+                    Image(painterResource(R.drawable.ic_coin), null, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = task.rewardCoins.toString(),
-                        color = Color(0xFF1D2A08),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text(task.rewardDriveCoin.toString(), color = Color(0xFF1D2A08), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
-
                 Spacer(Modifier.height(10.dp))
-
-                Text(
-                    text = task.title,
-                    color = Color(0xFF1D2A08),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2
-                )
-
+                Text(task.title, color = Color(0xFF1D2A08), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2)
                 Spacer(Modifier.height(8.dp))
+                Text(task.description, color = Color.Gray.copy(alpha = 0.9f), fontSize = 12.sp, maxLines = 4)
+            }
+        }
+    }
+}
 
-                Text(
-                    text = task.description,
-                    color = Color.Gray.copy(alpha = 0.9f),
-                    fontSize = 12.sp,
-                    maxLines = 4
-                )
+@Composable
+private fun StoreItemDialog(
+    item: DriveUpStoreItem,
+    onDismiss: () -> Unit,
+    onBuy: () -> Unit
+) {
+    val rankColor = when (item.allowedTier) {
+        "GOLD" -> Color(0xFFF24B16)
+        "SILVER" -> Color(0xFF171918)
+        else -> Color(0xFF97EA28)
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Box(Modifier.fillMaxSize().background(Color(0x7A000000)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(18.dp).clickable(enabled = false) {},
+                shape = RoundedCornerShape(18.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    Box(Modifier.fillMaxWidth().height(120.dp).background(rankColor)) {
+                        Image(painterResource(R.drawable.driveup_design_arrows), null, modifier = Modifier.align(Alignment.TopEnd).padding(top = 24.dp))
+                        Column(Modifier.fillMaxSize().padding(14.dp)) {
+                            Text(item.name, color = BrandGreen, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                            Spacer(Modifier.height(6.dp))
+                            Text(item.shortDescription, color = Color.White, fontSize = 14.sp)
+                        }
+                    }
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Описание", fontWeight = FontWeight.Bold)
+                        Text(item.description.ifBlank { "-" })
+                        Text("Условия пользования", fontWeight = FontWeight.Bold)
+                        Text(item.usageTerms.ifBlank { "-" })
+                        Text("Срок действия", fontWeight = FontWeight.Bold)
+                        Text(item.validityText.ifBlank { "-" })
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Image(painterResource(R.drawable.ic_coin), null, modifier = Modifier.size(18.dp))
+                            Text(" ${item.priceDriveCoin}", fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.weight(1f))
+                            Button(onClick = onBuy, colors = ButtonDefaults.buttonColors(containerColor = BrandGreen, contentColor = Color(0xFF1D2A08))) {
+                                Text("Купить")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
