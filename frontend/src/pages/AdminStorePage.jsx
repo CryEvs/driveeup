@@ -15,6 +15,12 @@ const initialForm = {
   isActive: true,
 }
 
+function tierPreviewColor(allowedTier) {
+  if (allowedTier === 'GOLD') return '#F24B16'
+  if (allowedTier === 'SILVER') return '#171918'
+  return '#97EA28'
+}
+
 export function AdminStorePage({ token, user }) {
   const isAdmin = !!user?.isAdmin
   const [items, setItems] = useState([])
@@ -115,6 +121,13 @@ export function AdminStorePage({ token, user }) {
         {items.map((it) => (
           <div key={it.id} className="bp-admin-season">
             <h3>{it.name}</h3>
+            <div
+              className="admin-store-tier-preview"
+              style={{ backgroundColor: tierPreviewColor(it.allowed_tier || 'ANY') }}
+              aria-label={`Превью ранга ${it.allowed_tier || 'ANY'}`}
+            >
+              <img src="/driveup_design_arrows.png" alt="" aria-hidden="true" />
+            </div>
             <p>Tier: {it.allowed_tier} | Цена: {it.price_drive_coin} | Active: {String(it.is_active)}</p>
             <button
               type="button"

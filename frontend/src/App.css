@@ -366,6 +366,24 @@ button {
   border-top: 1px solid #dbe8c6;
 }
 
+.admin-store-tier-preview {
+  position: relative;
+  width: min(320px, 100%);
+  height: 86px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 6px 0 10px;
+}
+
+.admin-store-tier-preview img {
+  position: absolute;
+  right: 0;
+  top: 16px;
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+}
+
 .bp-admin-level-actions > div {
   display: flex;
   gap: 8px;

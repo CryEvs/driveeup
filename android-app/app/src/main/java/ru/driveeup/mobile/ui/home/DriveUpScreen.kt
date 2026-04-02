@@ -364,14 +364,31 @@ private fun SectionHeader(title: String, onOpenAll: () -> Unit) {
 
 @Composable
 private fun StoreItemCard(item: DriveUpStoreItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val rankColor = when (item.allowedTier) {
+        "GOLD" -> Color(0xFFF24B16)
+        "SILVER" -> Color(0xFF171918)
+        else -> Color(0xFF97EA28)
+    }
     Card(
         modifier = modifier.width(230.dp).height(300.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(BrandCornerRadius),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Image(painterResource(R.drawable.ic_coin), contentDescription = null, modifier = Modifier.size(90.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(rankColor)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.driveup_design_arrows),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp)
+                )
             }
             Text(item.shortDescription.ifBlank { item.name }, color = Color.Gray, fontSize = 12.sp, maxLines = 3)
             Row(verticalAlignment = Alignment.CenterVertically) {
