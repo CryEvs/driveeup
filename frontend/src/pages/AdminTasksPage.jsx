@@ -5,6 +5,8 @@ import { API_BASE } from '../authContext.jsx'
 const initialTaskForm = {
   title: '',
   description: '',
+  completionType: 'RIDES',
+  requiredRidesCount: 1,
   rewardDriveCoin: 0,
   sortOrder: 0,
   isActive: true,
@@ -57,6 +59,7 @@ export function AdminTasksPage({ token, user }) {
     try {
       const payload = {
         ...form,
+        requiredRidesCount: form.completionType === 'RIDES' ? Number(form.requiredRidesCount) : null,
         rewardDriveCoin: Number(form.rewardDriveCoin),
         sortOrder: Number(form.sortOrder),
         isActive: !!form.isActive,
@@ -82,6 +85,24 @@ export function AdminTasksPage({ token, user }) {
         <input value={form.title} onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))} required />
         <label className="bp-field-label">Описание</label>
         <textarea value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
+        <label className="bp-field-label">Тип выполнения</label>
+        <select value={form.completionType} onChange={(e) => setForm((s) => ({ ...s, completionType: e.target.value }))}>
+          <option value="RIDES">За поездки</option>
+          <option value="RATING">За полученную оценку рейтинга</option>
+          <option value="REFERRAL">За приглашение друга по реферальной ссылке</option>
+        </select>
+        {form.completionType === 'RIDES' ? (
+          <>
+            <label className="bp-field-label">За какое количество поездок</label>
+            <input
+              type="number"
+              min="1"
+              value={form.requiredRidesCount}
+              onChange={(e) => setForm((s) => ({ ...s, requiredRidesCount: e.target.value }))}
+              required
+            />
+          </>
+        ) : null}
         <label className="bp-field-label">Награда (DriveCoin)</label>
         <input type="number" min="0" value={form.rewardDriveCoin} onChange={(e) => setForm((s) => ({ ...s, rewardDriveCoin: e.target.value }))} required />
         <label className="bp-field-label">Порядок сортировки</label>
@@ -96,7 +117,11 @@ export function AdminTasksPage({ token, user }) {
         {tasks.map((task) => (
           <div key={task.id} className="bp-admin-season">
             <h3>{task.title}</h3>
-            <p>Награда: {task.reward_drive_coin} | Active: {String(task.is_active)}</p>
+            <p>
+              Тип: {task.completion_type}
+              {task.completion_type === 'RIDES' ? ` (${task.required_rides_count || 1} поездок)` : ''}
+              {' | '}Награда: {task.reward_drive_coin} | Active: {String(task.is_active)}
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -104,6 +129,8 @@ export function AdminTasksPage({ token, user }) {
                 setForm({
                   title: task.title || '',
                   description: task.description || '',
+                  completionType: task.completion_type || 'RIDES',
+                  requiredRidesCount: task.required_rides_count || 1,
                   rewardDriveCoin: task.reward_drive_coin || 0,
                   sortOrder: task.sort_order || 0,
                   isActive: !!task.is_active,

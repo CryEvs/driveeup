@@ -227,6 +227,13 @@ class DriveupController extends Controller
         $v = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000000'],
+            'completionType' => ['required', Rule::in(['RIDES', 'RATING', 'REFERRAL'])],
+            'requiredRidesCount' => [
+                Rule::requiredIf(fn () => ($request->input('completionType') ?? 'RIDES') === 'RIDES'),
+                'nullable',
+                'integer',
+                'min:1',
+            ],
             'rewardDriveCoin' => ['required', 'integer', 'min:0'],
             'isActive' => ['nullable', 'boolean'],
             'sortOrder' => ['nullable', 'integer', 'min:0'],
@@ -234,6 +241,10 @@ class DriveupController extends Controller
         $task = DriveupTask::create([
             'title' => $v['title'],
             'description' => $v['description'] ?? null,
+            'completion_type' => $v['completionType'],
+            'required_rides_count' => ($v['completionType'] ?? 'RIDES') === 'RIDES'
+                ? (int) ($v['requiredRidesCount'] ?? 1)
+                : null,
             'reward_drive_coin' => (int) $v['rewardDriveCoin'],
             'is_active' => (bool) ($v['isActive'] ?? true),
             'sort_order' => (int) ($v['sortOrder'] ?? 0),
@@ -249,12 +260,23 @@ class DriveupController extends Controller
         $v = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000000'],
+            'completionType' => ['required', Rule::in(['RIDES', 'RATING', 'REFERRAL'])],
+            'requiredRidesCount' => [
+                Rule::requiredIf(fn () => ($request->input('completionType') ?? 'RIDES') === 'RIDES'),
+                'nullable',
+                'integer',
+                'min:1',
+            ],
             'rewardDriveCoin' => ['required', 'integer', 'min:0'],
             'isActive' => ['nullable', 'boolean'],
             'sortOrder' => ['nullable', 'integer', 'min:0'],
         ]);
         $task->title = $v['title'];
         $task->description = $v['description'] ?? null;
+        $task->completion_type = $v['completionType'];
+        $task->required_rides_count = ($v['completionType'] ?? 'RIDES') === 'RIDES'
+            ? (int) ($v['requiredRidesCount'] ?? 1)
+            : null;
         $task->reward_drive_coin = (int) $v['rewardDriveCoin'];
         $task->is_active = (bool) ($v['isActive'] ?? true);
         $task->sort_order = (int) ($v['sortOrder'] ?? 0);
@@ -333,6 +355,8 @@ class DriveupController extends Controller
                 'id' => $task->id,
                 'title' => $task->title,
                 'description' => $task->description,
+                'completionType' => $task->completion_type,
+                'requiredRidesCount' => $task->required_rides_count !== null ? (int) $task->required_rides_count : null,
                 'rewardDriveCoin' => (int) $task->reward_drive_coin,
                 'sortOrder' => (int) $task->sort_order,
             ])->values()->all();

@@ -297,8 +297,8 @@ private fun DriveUpTopBar(
 private fun HeroSection(displayName: String, driveCoin: Long) {
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = ReyvoHeroBottomRadius, bottomEnd = ReyvoHeroBottomRadius))) {
         Image(painterResource(R.drawable.reyvo_hello), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
-        Column(Modifier.matchParentSize().padding(start = 36.dp, end = 36.dp, top = 20.dp, bottom = 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Text("Привет, $displayName!", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Column(Modifier.matchParentSize().padding(start = 36.dp, end = 36.dp, top = 26.dp, bottom = 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text("Привет, $displayName!", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Surface(shape = RoundedCornerShape(14.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("На твоем счету: ", color = Color(0xFF1D2A08), fontSize = 15.sp)
@@ -364,22 +364,34 @@ private fun SectionHeader(title: String, onOpenAll: () -> Unit) {
 
 @Composable
 private fun StoreItemCard(item: DriveUpStoreItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val rankColor = when (item.allowedTier) {
-        "GOLD" -> Color(0xFFF24B16)
-        "SILVER" -> Color(0xFF171918)
+    val isGold = item.allowedTier == "GOLD"
+    val isSilver = item.allowedTier == "SILVER"
+    val rankColor = when {
+        isGold -> Color(0xFFF24B16)
+        isSilver -> Color(0xFF171918)
         else -> Color(0xFF97EA28)
     }
+    val rankTitleColor = when {
+        isGold -> Color(0xFFF7F3E7)
+        isSilver -> Color(0xFF97EA28)
+        else -> Color(0xFF171918)
+    }
+    val rankSubtitle = when {
+        isGold -> "Для золотого уровня"
+        isSilver -> "Для серебрянного уровня"
+        else -> "Для любого уровня"
+    }
     Card(
-        modifier = modifier.width(230.dp).height(300.dp).clickable(onClick = onClick),
+        modifier = modifier.width(200.dp).height(300.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(BrandCornerRadius),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(topStart = BrandCornerRadius, topEnd = BrandCornerRadius))
                     .background(rankColor)
             ) {
                 Image(
@@ -389,15 +401,52 @@ private fun StoreItemCard(item: DriveUpStoreItem, onClick: () -> Unit, modifier:
                         .align(Alignment.TopEnd)
                         .padding(top = 16.dp)
                 )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = item.name,
+                        color = rankTitleColor,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = rankSubtitle,
+                        color = rankTitleColor.copy(alpha = 0.9f),
+                        fontSize = 11.sp,
+                        maxLines = 1
+                    )
+                }
             }
-            Text(item.shortDescription.ifBlank { item.name }, color = Color.Gray, fontSize = 12.sp, maxLines = 3)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painterResource(R.drawable.ic_coin), null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(item.priceDriveCoin.toString(), color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold)
-            }
-            Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = BrandGreen, contentColor = Color(0xFF1D2A08)), shape = RoundedCornerShape(12.dp)) {
-                Text("Купить", fontWeight = FontWeight.SemiBold)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(item.shortDescription.ifBlank { item.name }, color = Color.Gray, fontSize = 12.sp, maxLines = 3)
+                Spacer(Modifier.weight(1f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(painterResource(R.drawable.ic_coin), null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        item.priceDriveCoin.toString(),
+                        color = Color(0xFF1D2A08),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = BrandGreen, contentColor = Color(0xFF1D2A08)), shape = RoundedCornerShape(12.dp)) {
+                    Text("Купить", fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -408,7 +457,7 @@ private fun TaskCard(task: DriveUpTaskItem, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.width(185.dp).height(200.dp),
         shape = RoundedCornerShape(BrandCornerRadius),
-        border = BorderStroke(2.dp, BrandGreen),
+        border = BorderStroke(1.dp, BrandGreen),
         shadowElevation = 6.dp,
         color = Color.White
     ) {
@@ -443,9 +492,9 @@ private fun StoreItemDialog(
         else -> Color(0xFF97EA28)
     }
     Dialog(onDismissRequest = onDismiss) {
-        Box(Modifier.fillMaxSize().background(Color(0x7A000000)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(18.dp).clickable(enabled = false) {},
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 18.dp).clickable(enabled = false) {},
                 shape = RoundedCornerShape(18.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
             ) {
@@ -453,24 +502,24 @@ private fun StoreItemDialog(
                     Box(Modifier.fillMaxWidth().height(120.dp).background(rankColor)) {
                         Image(painterResource(R.drawable.driveup_design_arrows), null, modifier = Modifier.align(Alignment.TopEnd).padding(top = 24.dp))
                         Column(Modifier.fillMaxSize().padding(14.dp)) {
-                            Text(item.name, color = BrandGreen, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                            Text(item.name, color = BrandGreen, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                             Spacer(Modifier.height(6.dp))
-                            Text(item.shortDescription, color = Color.White, fontSize = 14.sp)
+                            Text(item.shortDescription, color = Color.White, fontSize = 13.sp)
                         }
                     }
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Описание", fontWeight = FontWeight.Bold)
-                        Text(item.description.ifBlank { "-" })
-                        Text("Условия пользования", fontWeight = FontWeight.Bold)
-                        Text(item.usageTerms.ifBlank { "-" })
-                        Text("Срок действия", fontWeight = FontWeight.Bold)
-                        Text(item.validityText.ifBlank { "-" })
+                        Text("Описание", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(item.description.ifBlank { "-" }, fontSize = 13.sp)
+                        Text("Условия пользования", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(item.usageTerms.ifBlank { "-" }, fontSize = 13.sp)
+                        Text("Срок действия", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(item.validityText.ifBlank { "-" }, fontSize = 13.sp)
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Image(painterResource(R.drawable.ic_coin), null, modifier = Modifier.size(18.dp))
-                            Text(" ${item.priceDriveCoin}", fontWeight = FontWeight.SemiBold)
+                            Text(" ${item.priceDriveCoin}", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                             Spacer(Modifier.weight(1f))
                             Button(onClick = onBuy, colors = ButtonDefaults.buttonColors(containerColor = BrandGreen, contentColor = Color(0xFF1D2A08))) {
-                                Text("Купить")
+                                Text("Купить", fontSize = 13.sp)
                             }
                         }
                     }

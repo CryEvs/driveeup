@@ -4,7 +4,6 @@ import { API_BASE } from '../authContext.jsx'
 
 const initialForm = {
   name: '',
-  iconUrl: '',
   shortDescription: '',
   allowedTier: 'ANY',
   description: '',
@@ -91,8 +90,6 @@ export function AdminStorePage({ token, user }) {
       <form onSubmit={submit} className="bp-admin-col">
         <label className="bp-field-label">Название</label>
         <input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} required />
-        <label className="bp-field-label">Иконка (URL)</label>
-        <input value={form.iconUrl} onChange={(e) => setForm((s) => ({ ...s, iconUrl: e.target.value }))} />
         <label className="bp-field-label">Краткое описание</label>
         <textarea value={form.shortDescription} onChange={(e) => setForm((s) => ({ ...s, shortDescription: e.target.value }))} />
         <label className="bp-field-label">Для какого статуса доступно</label>
@@ -135,7 +132,6 @@ export function AdminStorePage({ token, user }) {
                 setEditingId(it.id)
                 setForm({
                   name: it.name || '',
-                  iconUrl: it.icon_url || '',
                   shortDescription: it.short_description || '',
                   allowedTier: it.allowed_tier || 'ANY',
                   description: it.description || '',
