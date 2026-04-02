@@ -12,6 +12,7 @@ class DriveupNextRideBenefit extends Model
     protected $fillable = [
         'tier',
         'benefit_text',
+        'level_description',
         'updated_by_user_id',
     ];
 

@@ -27,6 +27,7 @@ class DriveupController extends Controller
         $items = $this->storeItemsForTier($tier);
         $tasks = $this->activeTasks();
         $benefits = $this->benefitsMap();
+        $descriptions = $this->levelDescriptionsMap();
 
         return response()->json([
             'loyaltyTier' => $tier,
@@ -36,6 +37,7 @@ class DriveupController extends Controller
             'tasks' => $tasks,
             'nextRideBenefits' => $benefits,
             'nextRideBenefitForTier' => $benefits[$tier] ?? '',
+            'loyaltyLevelDescriptions' => $descriptions,
         ]);
     }
 
@@ -312,9 +314,11 @@ class DriveupController extends Controller
         $v = $request->validate([
             'tier' => ['required', Rule::in(['BRONZE', 'SILVER', 'GOLD'])],
             'benefitText' => ['required', 'string', 'max:2000000'],
+            'levelDescription' => ['nullable', 'string', 'max:2000000'],
         ]);
         $row = DriveupNextRideBenefit::query()->firstOrNew(['tier' => $v['tier']]);
         $row->benefit_text = $v['benefitText'];
+        $row->level_description = $v['levelDescription'] ?? null;
         $row->updated_by_user_id = $admin->id;
         $row->save();
         return response()->json($row);
@@ -372,6 +376,22 @@ class DriveupController extends Controller
         ];
         foreach ($rows as $row) {
             $map[(string) $row->tier] = (string) $row->benefit_text;
+        }
+        return $map;
+    }
+
+    private function levelDescriptionsMap(): array
+    {
+        $rows = DriveupNextRideBenefit::query()->get();
+        $map = [
+            'BRONZE' => 'Бронзовый уровень: стартовые привилегии и базовые преимущества.',
+            'SILVER' => 'Серебряный уровень: больше бонусов и улучшенные условия.',
+            'GOLD' => 'Золотой уровень: максимальные привилегии и лучшие условия сервиса.',
+        ];
+        foreach ($rows as $row) {
+            if (! empty($row->level_description)) {
+                $map[(string) $row->tier] = (string) $row->level_description;
+            }
         }
         return $map;
     }

@@ -11,6 +11,11 @@ export function AdminLoyaltyPage({ token, user }) {
     SILVER: 'Расширенные бонусы и приоритет в программе',
     GOLD: 'Максимальные привилегии и приоритет DriveUP',
   })
+  const [descriptions, setDescriptions] = useState({
+    BRONZE: 'Бронзовый уровень: стартовые привилегии и базовые преимущества.',
+    SILVER: 'Серебряный уровень: больше бонусов и улучшенные условия.',
+    GOLD: 'Золотой уровень: максимальные привилегии и лучшие условия сервиса.',
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -36,10 +41,13 @@ export function AdminLoyaltyPage({ token, user }) {
     try {
       const rows = await api('/admin/loyalty/next-ride-benefits')
       const map = { ...benefits }
+      const descriptionsMap = { ...descriptions }
       ;(rows || []).forEach((r) => {
         if (r?.tier) map[r.tier] = r.benefit_text || ''
+        if (r?.tier) descriptionsMap[r.tier] = r.level_description || descriptionsMap[r.tier] || ''
       })
       setBenefits(map)
+      setDescriptions(descriptionsMap)
     } catch (e) {
       setError(e.message || 'Ошибка загрузки')
     } finally {
@@ -57,6 +65,7 @@ export function AdminLoyaltyPage({ token, user }) {
       await api('/admin/loyalty/next-ride-benefits', 'PUT', {
         tier,
         benefitText: benefits[tier] || '',
+        levelDescription: descriptions[tier] || '',
       })
       await load()
     } catch (e) {
@@ -68,7 +77,7 @@ export function AdminLoyaltyPage({ token, user }) {
     <section className="content-card">
       <h1>Админ: Что применится к следующей поездке</h1>
       <p style={{ marginTop: 6, color: '#6c6c6c' }}>
-        Редактирование преимуществ по статусу лояльности.
+        Редактирование преимуществ и описаний уровней по статусу лояльности.
       </p>
       {error && <p className="error">{error}</p>}
       {loading ? <p>Загрузка...</p> : null}
@@ -77,6 +86,12 @@ export function AdminLoyaltyPage({ token, user }) {
         {TIERS.map((tier) => (
           <div key={tier} className="bp-admin-season">
             <h3>{tier}</h3>
+            <label className="bp-field-label">Описание уровня (вкладка уровня лояльности)</label>
+            <textarea
+              value={descriptions[tier] || ''}
+              onChange={(e) => setDescriptions((s) => ({ ...s, [tier]: e.target.value }))}
+            />
+            <label className="bp-field-label">Что применится к следующей поездке</label>
             <textarea
               value={benefits[tier] || ''}
               onChange={(e) => setBenefits((s) => ({ ...s, [tier]: e.target.value }))}

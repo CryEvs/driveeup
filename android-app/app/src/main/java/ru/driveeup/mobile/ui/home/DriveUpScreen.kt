@@ -72,6 +72,7 @@ fun DriveUpScreen(
     onOpenBattlePass: () -> Unit,
     onOpenStoreAll: () -> Unit,
     onOpenTasksAll: () -> Unit,
+    onOpenLoyaltyLevels: () -> Unit,
     onNotifications: () -> Unit = {}
 ) {
     val repo = remember { DriveUpRepository() }
@@ -104,7 +105,9 @@ fun DriveUpScreen(
                     .background(Color.White).padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                DriveUpLoyaltySection(tier = tier, ridesCount = rides)
+                Box(Modifier.fillMaxWidth().clickable(onClick = onOpenLoyaltyLevels)) {
+                    DriveUpLoyaltySection(tier = tier, ridesCount = rides)
+                }
                 Text("К следующей поездке применится:", color = Color(0xFF1D2A08), fontWeight = FontWeight.Medium, fontSize = 14.sp)
                 NextRideBenefitCard(nextRideBenefit)
 
@@ -137,6 +140,102 @@ fun DriveUpScreen(
             item = selectedItem!!,
             onDismiss = { selectedItem = null },
             onBuy = { selectedItem = null /* TODO purchase API */ }
+        )
+    }
+}
+
+@Composable
+fun DriveUpLoyaltyLevelsScreen(
+    user: User,
+    token: String,
+    onBack: () -> Unit,
+    onMenuBack: () -> Unit,
+    onNotifications: () -> Unit = {}
+) {
+    val repo = remember { DriveUpRepository() }
+    var content by remember { mutableStateOf<DriveUpContent?>(null) }
+    var selectedTier by remember { mutableStateOf("BRONZE") }
+    val rides = content?.ridesCount ?: user.ridesCount
+    val currentTier = loyaltyTierFromRides(rides)
+    val descriptions = content?.loyaltyLevelDescriptions ?: mapOf(
+        "BRONZE" to "Бронзовый уровень: стартовые привилегии и базовые преимущества.",
+        "SILVER" to "Серебряный уровень: больше бонусов и улучшенные условия.",
+        "GOLD" to "Золотой уровень: максимальные привилегии и лучшие условия сервиса."
+    )
+
+    LaunchedEffect(token) {
+        content = runCatching { repo.content(token) }.getOrNull()
+        selectedTier = currentTier.name
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(DriveUpDarkBg)
+        ) {
+            DriveUpTopBar(onBack = onMenuBack, onNotifications = onNotifications, dark = true)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = Color.White)
+                }
+                Text("Система уровней", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Column(modifier = Modifier.padding(horizontal = 12.dp)) {
+                DriveUpLoyaltySection(tier = currentTier, ridesCount = rides)
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Row(Modifier.fillMaxWidth()) {
+                LoyaltyTab("Бронза", "#383C47", selectedTier == "BRONZE") { selectedTier = "BRONZE" }
+                LoyaltyTab("Серебро", "#97EA28", selectedTier == "SILVER") { selectedTier = "SILVER" }
+                LoyaltyTab("Золото", "#F24B16", selectedTier == "GOLD") { selectedTier = "GOLD" }
+            }
+            Spacer(Modifier.height(18.dp))
+            Text("Описание", color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(descriptions[selectedTier].orEmpty(), color = Color(0xFF1D2A08), fontSize = 15.sp)
+        }
+    }
+}
+
+@Composable
+private fun LoyaltyTab(
+    title: String,
+    colorHex: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    val color = Color(android.graphics.Color.parseColor(colorHex))
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = title,
+            color = color,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 16.sp
+        )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(if (active) color else Color.Transparent)
         )
     }
 }

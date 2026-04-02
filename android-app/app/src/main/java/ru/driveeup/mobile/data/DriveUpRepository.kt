@@ -10,6 +10,7 @@ import java.io.BufferedReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import org.json.JSONArray
 
 class DriveUpRepository {
     private val apiBase = "https://driveeup.ru/api"
@@ -89,8 +90,9 @@ class DriveUpRepository {
     }
 
     private fun parseContent(json: JSONObject): DriveUpContent {
-        val itemsArr = json.optJSONArray("storeItems") ?: org.json.JSONArray()
-        val tasksArr = json.optJSONArray("tasks") ?: org.json.JSONArray()
+        val itemsArr = json.optJSONArray("storeItems") ?: JSONArray()
+        val tasksArr = json.optJSONArray("tasks") ?: JSONArray()
+        val descriptionsObj = json.optJSONObject("loyaltyLevelDescriptions") ?: JSONObject()
         val items = (0 until itemsArr.length()).map { parseStoreItem(itemsArr.getJSONObject(it)) }
         val tasks = (0 until tasksArr.length()).map { parseTask(tasksArr.getJSONObject(it)) }
         return DriveUpContent(
@@ -98,9 +100,20 @@ class DriveUpRepository {
             driveCoin = json.optLong("driveCoin", 0L),
             ridesCount = json.optLong("ridesCount", 0L),
             nextRideBenefitForTier = json.optString("nextRideBenefitForTier", ""),
+            loyaltyLevelDescriptions = parseStringMap(descriptionsObj),
             storeItems = items,
             tasks = tasks
         )
+    }
+
+    private fun parseStringMap(json: JSONObject): Map<String, String> {
+        val result = linkedMapOf<String, String>()
+        val keys = json.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            result[key] = json.optString(key, "")
+        }
+        return result
     }
 
     private fun parseStoreItem(json: JSONObject): DriveUpStoreItem = DriveUpStoreItem(
