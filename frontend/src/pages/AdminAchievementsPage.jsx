@@ -5,9 +5,23 @@ import { API_BASE } from '../authContext.jsx'
 const initialForm = {
   title: '',
   description: '',
+  awardType: 'INITIAL',
+  ridesRequired: 1,
   iconUrl: '',
   sortOrder: 0,
   isActive: true,
+}
+
+function awardTypeLabel(type) {
+  switch (type) {
+    case 'RIDES':
+      return 'Проехать количество раз'
+    case 'EVERYONE':
+      return 'Получено у всех'
+    case 'INITIAL':
+    default:
+      return 'Начальное достижение'
+  }
 }
 
 export function AdminAchievementsPage({ token, user }) {
@@ -59,6 +73,8 @@ export function AdminAchievementsPage({ token, user }) {
       const payload = {
         title: form.title,
         description: form.description,
+        awardType: form.awardType,
+        ridesRequired: form.awardType === 'RIDES' ? Number(form.ridesRequired) : null,
         iconUrl: form.iconUrl,
         sortOrder: Number(form.sortOrder),
         isActive: !!form.isActive,
@@ -107,6 +123,27 @@ export function AdminAchievementsPage({ token, user }) {
         <input value={form.title} onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))} required />
         <label className="bp-field-label">Описание</label>
         <textarea value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
+        <label className="bp-field-label">Причина выдачи</label>
+        <select
+          value={form.awardType}
+          onChange={(e) => setForm((s) => ({ ...s, awardType: e.target.value }))}
+        >
+          <option value="RIDES">Проехать количество раз</option>
+          <option value="INITIAL">Начальное достижение</option>
+          <option value="EVERYONE">Получено у всех</option>
+        </select>
+        {form.awardType === 'RIDES' ? (
+          <>
+            <label className="bp-field-label">Сколько раз проехать</label>
+            <input
+              type="number"
+              min="1"
+              value={form.ridesRequired}
+              onChange={(e) => setForm((s) => ({ ...s, ridesRequired: e.target.value }))}
+              required
+            />
+          </>
+        ) : null}
         <label className="bp-field-label">Иконка (файл)</label>
         <input type="file" accept="image/*" onChange={(e) => uploadIcon(e.target.files?.[0])} />
         {uploadingIcon && <p>Загрузка иконки...</p>}
@@ -127,6 +164,12 @@ export function AdminAchievementsPage({ token, user }) {
             <p>{row.description || '—'}</p>
             {row.icon_url ? <img src={row.icon_url} alt="" style={{ maxWidth: 80, maxHeight: 80 }} /> : null}
             <p>
+              Причина:{' '}
+              {row.award_type === 'RIDES' && row.rides_required
+                ? `Проехать ${row.rides_required} раз`
+                : awardTypeLabel(row.award_type)}
+            </p>
+            <p>
               Порядок: {row.sort_order} · Активно: {row.is_active ? 'да' : 'нет'}
             </p>
             <button
@@ -136,6 +179,8 @@ export function AdminAchievementsPage({ token, user }) {
                 setForm({
                   title: row.title || '',
                   description: row.description || '',
+                  awardType: row.award_type || 'INITIAL',
+                  ridesRequired: row.rides_required ?? 1,
                   iconUrl: row.icon_url || '',
                   sortOrder: row.sort_order ?? 0,
                   isActive: !!row.is_active,

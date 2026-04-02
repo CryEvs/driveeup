@@ -5,4 +5,6 @@ data class AchievementItem(
     val title: String,
     val description: String,
     val iconUrl: String?,
+    val awardType: String?,
+    val ridesRequired: Int?,
 )

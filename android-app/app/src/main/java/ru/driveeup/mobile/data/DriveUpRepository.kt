@@ -178,12 +178,20 @@ class DriveUpRepository {
         sortOrder = json.optInt("sortOrder", 0)
     )
 
-    private fun parseAchievement(json: JSONObject): AchievementItem = AchievementItem(
-        id = json.optLong("id"),
-        title = json.optString("title"),
-        description = json.optString("description"),
-        iconUrl = json.optString("iconUrl").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) },
-    )
+    private fun parseAchievement(json: JSONObject): AchievementItem {
+        val rides = when {
+            !json.has("ridesRequired") || json.isNull("ridesRequired") -> null
+            else -> json.optInt("ridesRequired").takeIf { it > 0 }
+        }
+        return AchievementItem(
+            id = json.optLong("id"),
+            title = json.optString("title"),
+            description = json.optString("description"),
+            iconUrl = json.optString("iconUrl").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) },
+            awardType = json.optString("awardType").takeUnless { it.isBlank() },
+            ridesRequired = rides,
+        )
+    }
 
     private fun parseNotification(json: JSONObject): DriveUpNotification = DriveUpNotification(
         id = json.optLong("id"),

@@ -7,6 +7,7 @@ use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AchievementController extends Controller
 {
@@ -29,6 +30,8 @@ class AchievementController extends Controller
             'description' => $a->description,
             'iconUrl' => $a->icon_url,
             'sortOrder' => (int) $a->sort_order,
+            'awardType' => $a->award_type,
+            'ridesRequired' => $a->rides_required !== null ? (int) $a->rides_required : null,
         ])->values());
     }
 
@@ -52,14 +55,23 @@ class AchievementController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000000'],
+            'awardType' => ['required', Rule::in(['RIDES', 'INITIAL', 'EVERYONE'])],
+            'ridesRequired' => ['nullable', 'integer', 'min:1'],
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'sortOrder' => ['nullable', 'integer', 'min:0'],
             'isActive' => ['nullable', 'boolean'],
         ]);
 
+        $err = $this->validateAwardFields($validated);
+        if ($err !== null) {
+            return response()->json(['error' => $err], 422);
+        }
+
         $row = Achievement::create([
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
+            'award_type' => $validated['awardType'],
+            'rides_required' => $validated['awardType'] === 'RIDES' ? (int) $validated['ridesRequired'] : null,
             'icon_url' => $validated['iconUrl'] ?? null,
             'sort_order' => (int) ($validated['sortOrder'] ?? 0),
             'is_active' => array_key_exists('isActive', $validated) ? (bool) $validated['isActive'] : true,
@@ -78,13 +90,22 @@ class AchievementController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000000'],
+            'awardType' => ['required', Rule::in(['RIDES', 'INITIAL', 'EVERYONE'])],
+            'ridesRequired' => ['nullable', 'integer', 'min:1'],
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'sortOrder' => ['nullable', 'integer', 'min:0'],
             'isActive' => ['nullable', 'boolean'],
         ]);
 
+        $err = $this->validateAwardFields($validated);
+        if ($err !== null) {
+            return response()->json(['error' => $err], 422);
+        }
+
         $achievement->title = $validated['title'];
         $achievement->description = $validated['description'] ?? null;
+        $achievement->award_type = $validated['awardType'];
+        $achievement->rides_required = $validated['awardType'] === 'RIDES' ? (int) $validated['ridesRequired'] : null;
         $achievement->icon_url = $validated['iconUrl'] ?? null;
         $achievement->sort_order = (int) ($validated['sortOrder'] ?? 0);
         if (array_key_exists('isActive', $validated)) {
@@ -124,6 +145,21 @@ class AchievementController extends Controller
         return response()->json([
             'iconUrl' => url('/api/achievements/icons/' . rawurlencode($relativePath)),
         ], 201);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function validateAwardFields(array $validated): ?string
+    {
+        if (($validated['awardType'] ?? '') === 'RIDES') {
+            $n = (int) ($validated['ridesRequired'] ?? 0);
+            if ($n < 1) {
+                return 'Для условия «Проехать N раз» укажите количество поездок (не меньше 1).';
+            }
+        }
+
+        return null;
     }
 
     public function iconFile(string $path)

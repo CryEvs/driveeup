@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { API_BASE } from '../authContext.jsx'
 
+function awardCaption(a) {
+  if (a.awardType === 'RIDES' && a.ridesRequired) {
+    return `Условие: проехать ${a.ridesRequired} поездок`
+  }
+  if (a.awardType === 'INITIAL') return 'Начальное достижение'
+  if (a.awardType === 'EVERYONE') return 'Получено у всех'
+  return null
+}
+
 export function AchievementsPage({ token }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,7 +46,9 @@ export function AchievementsPage({ token }) {
       {error && <p className="error">{error}</p>}
       {!loading && !error && items.length === 0 && <p>Пока нет достижений.</p>}
       <div className="achievements-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginTop: 16 }}>
-        {items.map((a) => (
+        {items.map((a) => {
+          const cap = awardCaption(a)
+          return (
           <article
             key={a.id}
             style={{
@@ -59,8 +70,11 @@ export function AchievementsPage({ token }) {
             )}
             <h3 style={{ margin: '8px 0 6px', fontSize: '1.05rem' }}>{a.title}</h3>
             <p style={{ margin: 0, color: '#555', fontSize: 13, lineHeight: 1.4 }}>{a.description}</p>
+            {cap ? (
+              <p style={{ margin: '10px 0 0', color: '#5c6b4a', fontSize: 11 }}>{cap}</p>
+            ) : null}
           </article>
-        ))}
+        )})}
       </div>
     </section>
   )

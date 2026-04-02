@@ -9,6 +9,8 @@ class Achievement extends Model
     protected $fillable = [
         'title',
         'description',
+        'award_type',
+        'rides_required',
         'icon_url',
         'sort_order',
         'is_active',
@@ -16,6 +18,7 @@ class Achievement extends Model
 
     protected $casts = [
         'sort_order' => 'integer',
+        'rides_required' => 'integer',
         'is_active' => 'boolean',
     ];
 }
