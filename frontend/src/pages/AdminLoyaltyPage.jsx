@@ -6,11 +6,6 @@ const TIERS = ['BRONZE', 'SILVER', 'GOLD']
 
 export function AdminLoyaltyPage({ token, user }) {
   const isAdmin = !!user?.isAdmin
-  const [benefits, setBenefits] = useState({
-    BRONZE: 'Базовые бонусы программы лояльности DriveUP',
-    SILVER: 'Расширенные бонусы и приоритет в программе',
-    GOLD: 'Максимальные привилегии и приоритет DriveUP',
-  })
   const [descriptions, setDescriptions] = useState({
     BRONZE: 'Бронзовый уровень: стартовые привилегии и базовые преимущества.',
     SILVER: 'Серебряный уровень: больше бонусов и улучшенные условия.',
@@ -44,17 +39,14 @@ export function AdminLoyaltyPage({ token, user }) {
     setError('')
     try {
       const rows = await api('/admin/loyalty/next-ride-benefits')
-      const map = { ...benefits }
       const descriptionsMap = { ...descriptions }
       const thresholdMap = { ...ridesThresholds }
       ;(rows || []).forEach((r) => {
-        if (r?.tier) map[r.tier] = r.benefit_text || ''
         if (r?.tier) descriptionsMap[r.tier] = r.level_description || descriptionsMap[r.tier] || ''
         if (r?.tier === 'SILVER' || r?.tier === 'GOLD') {
           thresholdMap[r.tier] = Number(r.rides_required_total || thresholdMap[r.tier] || 0)
         }
       })
-      setBenefits(map)
       setDescriptions(descriptionsMap)
       setRidesThresholds(thresholdMap)
     } catch (e) {
@@ -73,7 +65,6 @@ export function AdminLoyaltyPage({ token, user }) {
     try {
       await api('/admin/loyalty/next-ride-benefits', 'PUT', {
         tier,
-        benefitText: benefits[tier] || '',
         levelDescription: descriptions[tier] || '',
         ridesRequiredTotal: tier === 'SILVER' || tier === 'GOLD' ? Number(ridesThresholds[tier] || 0) : null,
       })
@@ -85,9 +76,9 @@ export function AdminLoyaltyPage({ token, user }) {
 
   return (
     <section className="content-card">
-      <h1>Админ: Что применится к следующей поездке</h1>
+      <h1>Админ: Уровни лояльности</h1>
       <p style={{ marginTop: 6, color: '#6c6c6c' }}>
-        Редактирование преимуществ и описаний уровней по статусу лояльности.
+        Редактирование описаний уровней и порогов поездок для повышения ранга.
       </p>
       {error && <p className="error">{error}</p>}
       {loading ? <p>Загрузка...</p> : null}
@@ -112,11 +103,6 @@ export function AdminLoyaltyPage({ token, user }) {
                 />
               </>
             ) : null}
-            <label className="bp-field-label">Что применится к следующей поездке</label>
-            <textarea
-              value={benefits[tier] || ''}
-              onChange={(e) => setBenefits((s) => ({ ...s, [tier]: e.target.value }))}
-            />
             <button type="button" onClick={() => saveTier(tier)}>Сохранить</button>
           </div>
         ))}

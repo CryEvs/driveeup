@@ -98,8 +98,7 @@ fun DriveUpScreen(
     val ridesForGold = (content?.loyaltyRidesThresholds?.get("GOLD") ?: 50L).coerceAtLeast(ridesForSilver + 1L)
     val tier = parseTier(content?.loyaltyTier) ?: loyaltyTierFromRides(rides)
     val nextRideBenefit = content?.nextRideStoreItemName?.takeIf { it.isNotBlank() }
-        ?: content?.nextRideBenefitForTier?.takeIf { it.isNotBlank() }
-        ?: loyaltyTierRideBenefit(tier)
+        ?: "Купите товар в магазине"
 
     Column(Modifier.fillMaxSize().background(Color.White)) {
         DriveUpTopBar(onBack = onOpenMenu, onNotifications = onNotifications)

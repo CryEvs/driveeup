@@ -322,12 +322,14 @@ class DriveupController extends Controller
         }
         $v = $request->validate([
             'tier' => ['required', Rule::in(['BRONZE', 'SILVER', 'GOLD'])],
-            'benefitText' => ['required', 'string', 'max:2000000'],
+            'benefitText' => ['nullable', 'string', 'max:2000000'],
             'levelDescription' => ['nullable', 'string', 'max:2000000'],
             'ridesRequiredTotal' => ['nullable', 'integer', 'min:0'],
         ]);
         $row = DriveupNextRideBenefit::query()->firstOrNew(['tier' => $v['tier']]);
-        $row->benefit_text = $v['benefitText'];
+        if (array_key_exists('benefitText', $v)) {
+            $row->benefit_text = $v['benefitText'] ?? $row->benefit_text;
+        }
         $row->level_description = $v['levelDescription'] ?? null;
         $row->rides_required_total = in_array($v['tier'], ['SILVER', 'GOLD'], true)
             ? ($v['ridesRequiredTotal'] ?? null)
