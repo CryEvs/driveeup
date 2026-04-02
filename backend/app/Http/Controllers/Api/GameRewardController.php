@@ -5,15 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BattlePassSeason;
 use App\Models\User;
+use App\Models\UserNotification;
 use App\Models\UserBattlePassProgress;
 use Illuminate\Http\Request;
 
 class GameRewardController extends Controller
 {
-    /**
-     * Начисление DriveeCoin за пройденные полосы в игре «Перебеги дорогу».
-     * 0.5 монеты за полосу → на сервере округляем до целого.
-     */
+    /** Начисление DriveeCoin за пройденные полосы в игре «Перебеги дорогу». */
     public function claimDriveeCoin(Request $request)
     {
         $user = $this->resolveUserFromToken($request);
@@ -26,10 +24,10 @@ class GameRewardController extends Controller
         ]);
 
         $lanes = $validated['lanesPassed'];
-        $claimed = (int) round($lanes * 0.5);
+        $claimed = round($lanes * 0.5, 2);
 
-        $user->drivee_coin = (int) $user->drivee_coin + $claimed;
-        $user->total_drive_coin = (int) $user->total_drive_coin + $claimed;
+        $user->drivee_coin = (float) $user->drivee_coin + $claimed;
+        $user->total_drive_coin = (float) $user->total_drive_coin + $claimed;
         $user->save();
 
         $season = BattlePassSeason::query()
@@ -44,14 +42,23 @@ class GameRewardController extends Controller
                 ['user_id' => $user->id, 'season_id' => $season->id],
                 ['drive_coin_earned' => 0]
             );
-            $progress->drive_coin_earned = (int) $progress->drive_coin_earned + $claimed;
+            $progress->drive_coin_earned = (float) $progress->drive_coin_earned + $claimed;
             $progress->save();
+        }
+
+        if ($claimed > 0) {
+            UserNotification::create([
+                'user_id' => $user->id,
+                'type' => 'DRIVECOIN_ACCRUAL',
+                'title' => 'Начисление ДрайвКойнов',
+                'body' => 'Начисление койнов в количестве ' . rtrim(rtrim(number_format($claimed, 2, '.', ''), '0'), '.'),
+            ]);
         }
 
         return response()->json([
             'claimed' => $claimed,
-            'driveCoin' => (int) $user->drivee_coin,
-            'totalDriveCoin' => (int) $user->total_drive_coin,
+            'driveCoin' => round((float) $user->drivee_coin, 2),
+            'totalDriveCoin' => round((float) $user->total_drive_coin, 2),
         ]);
     }
 

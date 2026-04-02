@@ -33,8 +33,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'premium' => 'boolean',
             'is_admin' => 'boolean',
-            'drivee_coin' => 'integer',
-            'total_drive_coin' => 'integer',
+            'drivee_coin' => 'float',
+            'total_drive_coin' => 'float',
             'rating_avg' => 'float',
             'rides_count' => 'integer',
         ];

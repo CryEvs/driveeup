@@ -6,12 +6,22 @@ data class DriveUpStoreItem(
     val iconUrl: String?,
     val shortDescription: String,
     val allowedTier: String,
+    val itemType: String,
+    val discountPercent: Int?,
     val description: String,
     val usageTerms: String,
     val validityText: String,
     val priceDriveCoin: Long,
     val isAvailableForCurrentTier: Boolean,
     val sortOrder: Int
+)
+
+data class DriveUpNotification(
+    val id: Long,
+    val type: String,
+    val title: String,
+    val body: String,
+    val createdAt: String?
 )
 
 data class DriveUpTaskItem(
@@ -24,7 +34,7 @@ data class DriveUpTaskItem(
 
 data class DriveUpContent(
     val loyaltyTier: String,
-    val driveCoin: Long,
+    val driveCoin: Double,
     val ridesCount: Long,
     val nextRideBenefitForTier: String,
     val nextRideStoreItemName: String?,

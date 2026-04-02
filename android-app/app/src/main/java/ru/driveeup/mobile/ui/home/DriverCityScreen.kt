@@ -69,7 +69,7 @@ private val BlueRoute = Color(0xFF29B6F6)
 
 @Composable
 fun DriverCityScreen(
-    driveCoin: Long,
+    driveCoin: Double,
     token: String,
     @Suppress("UNUSED_PARAMETER") user: User,
     onOpenMenu: () -> Unit,

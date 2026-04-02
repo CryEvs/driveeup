@@ -8,6 +8,7 @@ use App\Models\DriveupStoreItem;
 use App\Models\DriveupTask;
 use App\Models\RideOrder;
 use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -32,7 +33,7 @@ class DriveupController extends Controller
 
         return response()->json([
             'loyaltyTier' => $tier,
-            'driveCoin' => (int) $user->drivee_coin,
+            'driveCoin' => round((float) $user->drivee_coin, 2),
             'ridesCount' => (int) $user->rides_count,
             'storeItems' => $items,
             'tasks' => $tasks,
@@ -95,20 +96,52 @@ class DriveupController extends Controller
         if (! $this->isItemAllowedForTier((string) $item->allowed_tier, $tier)) {
             return response()->json(['error' => 'Item is not available for your loyalty tier'], 403);
         }
-        $price = (int) $item->price_drive_coin;
-        if ((int) $user->drivee_coin < $price) {
+        $price = (float) $item->price_drive_coin;
+        if ((float) $user->drivee_coin < $price) {
             return response()->json(['error' => 'Not enough DriveCoin'], 422);
         }
-        $user->drivee_coin = (int) $user->drivee_coin - $price;
+        $user->drivee_coin = round((float) $user->drivee_coin - $price, 2);
         $user->next_ride_store_item_name = $item->name;
         $user->save();
 
+        $discount = $item->discount_percent !== null ? (int) $item->discount_percent : 0;
+        UserNotification::create([
+            'user_id' => $user->id,
+            'type' => 'PURCHASE',
+            'title' => 'Покупка оформлена',
+            'body' => "Покупка сертификата на {$discount}% скидки прошла успешно",
+        ]);
+
         return response()->json([
             'ok' => true,
-            'driveCoin' => (int) $user->drivee_coin,
+            'driveCoin' => round((float) $user->drivee_coin, 2),
             'purchasedItemId' => $item->id,
             'nextRideStoreItemName' => $user->next_ride_store_item_name,
         ]);
+    }
+
+    public function notifications(Request $request)
+    {
+        $user = $this->resolveUserFromToken($request);
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $rows = UserNotification::query()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->limit(100)
+            ->get();
+
+        return response()->json(
+            $rows->map(fn (UserNotification $n) => [
+                'id' => $n->id,
+                'type' => $n->type,
+                'title' => $n->title,
+                'body' => $n->body,
+                'createdAt' => optional($n->created_at)->toIso8601String(),
+            ])->values()
+        );
     }
 
     public function gamesAvailability(Request $request)
@@ -159,6 +192,8 @@ class DriveupController extends Controller
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'shortDescription' => ['nullable', 'string', 'max:2000000'],
             'allowedTier' => ['required', Rule::in(['ANY', 'SILVER', 'GOLD'])],
+            'itemType' => ['required', Rule::in(['DISCOUNT'])],
+            'discountPercent' => ['nullable', 'integer', 'min:1', 'max:100'],
             'description' => ['nullable', 'string', 'max:2000000'],
             'usageTerms' => ['nullable', 'string', 'max:2000000'],
             'validityText' => ['nullable', 'string', 'max:2000000'],
@@ -171,6 +206,8 @@ class DriveupController extends Controller
             'icon_url' => $v['iconUrl'] ?? null,
             'short_description' => $v['shortDescription'] ?? null,
             'allowed_tier' => $v['allowedTier'],
+            'item_type' => $v['itemType'],
+            'discount_percent' => $v['discountPercent'] ?? null,
             'description' => $v['description'] ?? null,
             'usage_terms' => $v['usageTerms'] ?? null,
             'validity_text' => $v['validityText'] ?? null,
@@ -191,6 +228,8 @@ class DriveupController extends Controller
             'iconUrl' => ['nullable', 'string', 'max:2000000'],
             'shortDescription' => ['nullable', 'string', 'max:2000000'],
             'allowedTier' => ['required', Rule::in(['ANY', 'SILVER', 'GOLD'])],
+            'itemType' => ['required', Rule::in(['DISCOUNT'])],
+            'discountPercent' => ['nullable', 'integer', 'min:1', 'max:100'],
             'description' => ['nullable', 'string', 'max:2000000'],
             'usageTerms' => ['nullable', 'string', 'max:2000000'],
             'validityText' => ['nullable', 'string', 'max:2000000'],
@@ -202,6 +241,8 @@ class DriveupController extends Controller
         $item->icon_url = $v['iconUrl'] ?? null;
         $item->short_description = $v['shortDescription'] ?? null;
         $item->allowed_tier = $v['allowedTier'];
+        $item->item_type = $v['itemType'];
+        $item->discount_percent = $v['discountPercent'] ?? null;
         $item->description = $v['description'] ?? null;
         $item->usage_terms = $v['usageTerms'] ?? null;
         $item->validity_text = $v['validityText'] ?? null;
@@ -353,6 +394,8 @@ class DriveupController extends Controller
                     'iconUrl' => $item->icon_url,
                     'shortDescription' => $item->short_description,
                     'allowedTier' => $item->allowed_tier,
+                    'itemType' => $item->item_type,
+                    'discountPercent' => $item->discount_percent !== null ? (int) $item->discount_percent : null,
                     'description' => $item->description,
                     'usageTerms' => $item->usage_terms,
                     'validityText' => $item->validity_text,

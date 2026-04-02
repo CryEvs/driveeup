@@ -16,7 +16,7 @@ class UserBattlePassProgress extends Model
     ];
 
     protected $casts = [
-        'drive_coin_earned' => 'integer',
+        'drive_coin_earned' => 'float',
     ];
 
     public function user(): BelongsTo

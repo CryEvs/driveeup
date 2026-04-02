@@ -148,8 +148,8 @@ class AuthRepository {
             city = json.optString("city"),
             role = runCatching { UserRole.valueOf(json.optString("role", UserRole.PASSENGER.name)) }
                 .getOrDefault(UserRole.PASSENGER),
-            driveCoin = if (json.has("driveCoin")) json.optLong("driveCoin") else json.optLong("driveeCoin"),
-            totalDriveCoin = json.optLong("totalDriveCoin"),
+            driveCoin = if (json.has("driveCoin")) json.optDouble("driveCoin") else json.optDouble("driveeCoin"),
+            totalDriveCoin = json.optDouble("totalDriveCoin"),
             premium = json.optBoolean("premium"),
             avatarUrl = json.optString("avatarUrl").ifBlank { null },
             ratingAvg = json.optDouble("ratingAvg", 5.0),

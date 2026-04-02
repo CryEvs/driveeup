@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\UserNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -37,6 +38,13 @@ class AuthController extends Controller
             'total_drive_coin' => 0,
             'premium' => false,
             'api_token' => bin2hex(random_bytes(32)),
+        ]);
+
+        UserNotification::create([
+            'user_id' => $user->id,
+            'type' => 'FIRST_LOGIN',
+            'title' => 'Добро пожаловать!',
+            'body' => 'Добро пожаловать в систему лояльности DriveUP!',
         ]);
 
         return response()->json([
@@ -167,8 +175,8 @@ class AuthController extends Controller
             'city' => $user->city ?? '',
             'role' => $user->role,
             'isAdmin' => (bool) $user->is_admin,
-            'driveCoin' => (int) $user->drivee_coin,
-            'totalDriveCoin' => (int) $user->total_drive_coin,
+            'driveCoin' => round((float) $user->drivee_coin, 2),
+            'totalDriveCoin' => round((float) $user->total_drive_coin, 2),
             'premium' => (bool) $user->premium,
             'avatarUrl' => $user->avatar_url,
             'ratingAvg' => isset($user->rating_avg) ? round((float) $user->rating_avg, 2) : 5.0,

@@ -102,7 +102,7 @@ data class PlaceHit(
 
 @Composable
 fun CityScreen(
-    driveCoin: Long,
+    driveCoin: Double,
     token: String,
     user: User,
     onOpenMenu: () -> Unit,

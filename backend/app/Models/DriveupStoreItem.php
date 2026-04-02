@@ -13,6 +13,8 @@ class DriveupStoreItem extends Model
         'icon_url',
         'short_description',
         'allowed_tier',
+        'item_type',
+        'discount_percent',
         'description',
         'usage_terms',
         'validity_text',
@@ -23,6 +25,7 @@ class DriveupStoreItem extends Model
 
     protected $casts = [
         'price_drive_coin' => 'integer',
+        'discount_percent' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];

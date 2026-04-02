@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import ru.driveeup.mobile.domain.DriveUpContent
+import ru.driveeup.mobile.domain.DriveUpNotification
 import ru.driveeup.mobile.domain.DriveUpStoreItem
 import ru.driveeup.mobile.domain.DriveUpTaskItem
 import java.io.BufferedReader
@@ -32,6 +33,11 @@ class DriveUpRepository {
 
     suspend fun purchaseStoreItem(token: String, itemId: Long): JSONObject = withContext(Dispatchers.IO) {
         requestJson("POST", "/driveup/store/items/$itemId/purchase", "{}", token)
+    }
+
+    suspend fun notifications(token: String): List<DriveUpNotification> = withContext(Dispatchers.IO) {
+        val arr = getJsonArray("/driveup/notifications", token)
+        (0 until arr.length()).map { parseNotification(arr.getJSONObject(it)) }
     }
 
     private fun getJson(path: String, token: String): JSONObject = requestJson("GET", path, null, token)
@@ -102,10 +108,11 @@ class DriveUpRepository {
         val tasks = (0 until tasksArr.length()).map { parseTask(tasksArr.getJSONObject(it)) }
         return DriveUpContent(
             loyaltyTier = json.optString("loyaltyTier", "BRONZE"),
-            driveCoin = json.optLong("driveCoin", 0L),
+            driveCoin = json.optDouble("driveCoin", 0.0),
             ridesCount = json.optLong("ridesCount", 0L),
             nextRideBenefitForTier = json.optString("nextRideBenefitForTier", ""),
-            nextRideStoreItemName = json.optString("nextRideStoreItemName").ifBlank { null },
+            nextRideStoreItemName = json.optString("nextRideStoreItemName")
+                .takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) },
             loyaltyLevelDescriptions = parseStringMap(descriptionsObj),
             loyaltyRidesThresholds = parseLongMap(thresholdsObj),
             storeItems = items,
@@ -136,9 +143,11 @@ class DriveUpRepository {
     private fun parseStoreItem(json: JSONObject): DriveUpStoreItem = DriveUpStoreItem(
         id = json.optLong("id"),
         name = json.optString("name"),
-        iconUrl = json.optString("iconUrl").ifBlank { null },
+        iconUrl = json.optString("iconUrl").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) },
         shortDescription = json.optString("shortDescription"),
         allowedTier = json.optString("allowedTier", "ANY"),
+        itemType = json.optString("itemType", "DISCOUNT"),
+        discountPercent = if (json.has("discountPercent") && !json.isNull("discountPercent")) json.optInt("discountPercent") else null,
         description = json.optString("description"),
         usageTerms = json.optString("usageTerms"),
         validityText = json.optString("validityText"),
@@ -153,6 +162,14 @@ class DriveUpRepository {
         description = json.optString("description"),
         rewardDriveCoin = json.optLong("rewardDriveCoin"),
         sortOrder = json.optInt("sortOrder", 0)
+    )
+
+    private fun parseNotification(json: JSONObject): DriveUpNotification = DriveUpNotification(
+        id = json.optLong("id"),
+        type = json.optString("type"),
+        title = json.optString("title"),
+        body = json.optString("body"),
+        createdAt = json.optString("createdAt").ifBlank { null }
     )
 }
 

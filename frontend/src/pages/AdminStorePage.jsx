@@ -6,6 +6,8 @@ const initialForm = {
   name: '',
   shortDescription: '',
   allowedTier: 'ANY',
+  itemType: 'DISCOUNT',
+  discountPercent: 10,
   description: '',
   usageTerms: '',
   validityText: '',
@@ -67,6 +69,7 @@ export function AdminStorePage({ token, user }) {
     try {
       const payload = {
         ...form,
+        discountPercent: form.itemType === 'DISCOUNT' ? Number(form.discountPercent) : null,
         priceDriveCoin: Number(form.priceDriveCoin),
         sortOrder: Number(form.sortOrder),
         isActive: !!form.isActive,
@@ -98,6 +101,19 @@ export function AdminStorePage({ token, user }) {
           <option value="SILVER">Серебряный и выше</option>
           <option value="GOLD">Только золотой</option>
         </select>
+        <label className="bp-field-label">Тип товара</label>
+        <select value={form.itemType} onChange={(e) => setForm((s) => ({ ...s, itemType: e.target.value }))}>
+          <option value="DISCOUNT">Скидка</option>
+        </select>
+        <label className="bp-field-label">Процент скидки</label>
+        <input
+          type="number"
+          min="1"
+          max="100"
+          value={form.discountPercent}
+          onChange={(e) => setForm((s) => ({ ...s, discountPercent: e.target.value }))}
+          required
+        />
         <label className="bp-field-label">Описание</label>
         <textarea value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
         <label className="bp-field-label">Условия пользования</label>
@@ -125,7 +141,7 @@ export function AdminStorePage({ token, user }) {
             >
               <img src="/driveup_design_arrows.png" alt="" aria-hidden="true" />
             </div>
-            <p>Tier: {it.allowed_tier} | Цена: {it.price_drive_coin} | Active: {String(it.is_active)}</p>
+            <p>Tier: {it.allowed_tier} | Тип: {it.item_type} ({it.discount_percent || 0}%) | Цена: {it.price_drive_coin} | Active: {String(it.is_active)}</p>
             <button
               type="button"
               onClick={() => {
@@ -134,6 +150,8 @@ export function AdminStorePage({ token, user }) {
                   name: it.name || '',
                   shortDescription: it.short_description || '',
                   allowedTier: it.allowed_tier || 'ANY',
+                  itemType: it.item_type || 'DISCOUNT',
+                  discountPercent: it.discount_percent || 10,
                   description: it.description || '',
                   usageTerms: it.usage_terms || '',
                   validityText: it.validity_text || '',

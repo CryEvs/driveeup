@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BattlePassLevel;
 use App\Models\BattlePassSeason;
+use App\Models\UserNotification;
 use App\Models\User;
 use App\Models\UserBattlePassProgress;
 use App\Models\UserBattlePassLevelReward;
@@ -336,9 +337,15 @@ class BattlePassController extends Controller
         ]);
 
         if ($giftDriveCoin > 0) {
-            $user->drivee_coin = (int) $user->drivee_coin + $giftDriveCoin;
-            $user->total_drive_coin = (int) $user->total_drive_coin + $giftDriveCoin;
+            $user->drivee_coin = (float) $user->drivee_coin + $giftDriveCoin;
+            $user->total_drive_coin = (float) $user->total_drive_coin + $giftDriveCoin;
             $user->save();
+            UserNotification::create([
+                'user_id' => $user->id,
+                'type' => 'DRIVECOIN_ACCRUAL',
+                'title' => 'Начисление ДрайвКойнов',
+                'body' => 'Начисление койнов в количестве ' . $giftDriveCoin,
+            ]);
         }
 
         return response()->json([
@@ -346,8 +353,8 @@ class BattlePassController extends Controller
             'giftType' => $giftType,
             'giftDriveCoin' => $giftDriveCoin,
             'giftText' => $giftType === 'TEXT' ? $level->gift_text : null,
-            'driveCoin' => (int) $user->drivee_coin,
-            'totalDriveCoin' => (int) $user->total_drive_coin,
+            'driveCoin' => round((float) $user->drivee_coin, 2),
+            'totalDriveCoin' => round((float) $user->total_drive_coin, 2),
         ]);
     }
 

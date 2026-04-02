@@ -42,6 +42,7 @@ Route::get('/driveup/store/items', [DriveupController::class, 'storeItems']);
 Route::post('/driveup/store/items/{item}/purchase', [DriveupController::class, 'purchaseStoreItem'])->whereNumber('item');
 Route::get('/driveup/tasks', [DriveupController::class, 'tasks']);
 Route::get('/driveup/next-ride-benefits', [DriveupController::class, 'nextRideBenefits']);
+Route::get('/driveup/notifications', [DriveupController::class, 'notifications']);
 Route::get('/driveup/games/availability', [DriveupController::class, 'gamesAvailability']);
 
 Route::get('/admin/battle-pass/seasons', [BattlePassController::class, 'adminSeasons']);

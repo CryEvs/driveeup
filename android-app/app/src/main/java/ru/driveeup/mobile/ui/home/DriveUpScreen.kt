@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 import ru.driveeup.mobile.R
 import ru.driveeup.mobile.data.DriveUpRepository
 import ru.driveeup.mobile.domain.DriveUpContent
+import ru.driveeup.mobile.domain.DriveUpNotification
 import ru.driveeup.mobile.domain.DriveUpStoreItem
 import ru.driveeup.mobile.domain.DriveUpTaskItem
 import ru.driveeup.mobile.domain.User
@@ -64,6 +65,11 @@ private val BrandGreen = Color(0xFF96EA28)
 private val DriveUpDarkBg = Color(0xFF171918)
 private val ReyvoHeroBottomRadius = 22.dp
 private val BrandCornerRadius = 16.dp
+
+private fun formatCoin(value: Double): String {
+    val rounded = kotlin.math.round(value * 100.0) / 100.0
+    return if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString().replace('.', ',')
+}
 
 @Composable
 fun DriveUpScreen(
@@ -238,6 +244,97 @@ fun DriveUpLoyaltyLevelsScreen(
 }
 
 @Composable
+fun DriveUpNotificationsScreen(
+    token: String,
+    onBack: () -> Unit
+) {
+    val repo = remember { DriveUpRepository() }
+    var loading by remember { mutableStateOf(true) }
+    var notifications by remember { mutableStateOf<List<DriveUpNotification>>(emptyList()) }
+    LaunchedEffect(token) {
+        loading = true
+        notifications = runCatching { repo.notifications(token) }.getOrElse { emptyList() }
+        loading = false
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DriveUpDarkBg)
+    ) {
+        DriveUpTopBarNoActions()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Назад",
+                    tint = Color.White
+                )
+            }
+            Text(
+                text = "Уведомления",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        if (loading) {
+            CircularProgressIndicator(
+                color = BrandGreen,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(notifications) { n ->
+                    NotificationCard(notification = n)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationCard(notification: DriveUpNotification) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0x1AFFFFFF),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Image(
+                painter = painterResource(R.drawable.notification_icon),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(notification.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(notification.body, color = Color.White, fontSize = 13.sp)
+                Text(notification.createdAt ?: "", color = Color(0xB3FFFFFF), fontSize = 11.sp)
+            }
+        }
+    }
+}
+
+@Composable
 private fun LoyaltyTab(
     title: String,
     colorHex: String,
@@ -276,6 +373,7 @@ fun DriveUpStoreAllScreen(
     onNotifications: () -> Unit = {}
 ) {
     val repo = remember { DriveUpRepository() }
+    val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<DriveUpStoreItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var selectedItem by remember { mutableStateOf<DriveUpStoreItem?>(null) }
@@ -384,7 +482,7 @@ fun DriveUpTasksAllScreen(
 
 @Composable
 private fun DarkListBase(
-    driveCoin: Long,
+    driveCoin: Double,
     title: String,
     onTitleBack: () -> Unit,
     onMenuBack: () -> Unit,
@@ -397,7 +495,7 @@ private fun DarkListBase(
             Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("На твоем счету: ", color = Color(0xFF1D2A08))
                 Image(painterResource(R.drawable.ic_coin), contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(" $driveCoin койнов.", color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold)
+                Text(" ${formatCoin(driveCoin)} койнов.", color = Color(0xFF1D2A08), fontWeight = FontWeight.SemiBold)
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -435,7 +533,26 @@ private fun DriveUpTopBar(
 }
 
 @Composable
-private fun HeroSection(displayName: String, driveCoin: Long) {
+private fun DriveUpTopBarNoActions() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(DriveUpDarkBg)
+            .height(40.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Spacer(Modifier.width(12.dp))
+        Image(
+            painter = painterResource(R.drawable.ic_logo_driveup),
+            contentDescription = "DriveUP",
+            modifier = Modifier.height(18.dp),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
+private fun HeroSection(displayName: String, driveCoin: Double) {
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = ReyvoHeroBottomRadius, bottomEnd = ReyvoHeroBottomRadius))) {
         Image(painterResource(R.drawable.reyvo_hello), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
         Column(Modifier.matchParentSize().padding(start = 36.dp, end = 36.dp, top = 26.dp, bottom = 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
@@ -444,7 +561,7 @@ private fun HeroSection(displayName: String, driveCoin: Long) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("На твоем счету: ", color = Color(0xFF1D2A08), fontSize = 15.sp)
                     Image(painterResource(R.drawable.ic_coin), contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(" $driveCoin ", color = Color(0xFF1D2A08), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(" ${formatCoin(driveCoin)} ", color = Color(0xFF1D2A08), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text("койнов.", color = Color(0xFF1D2A08), fontSize = 15.sp)
                 }
             }

@@ -63,13 +63,14 @@ import ru.driveeup.mobile.ui.home.CityScreen
 import ru.driveeup.mobile.ui.home.DriverCityScreen
 import ru.driveeup.mobile.ui.home.DriveUpScreen
 import ru.driveeup.mobile.ui.home.DriveUpLoyaltyLevelsScreen
+import ru.driveeup.mobile.ui.home.DriveUpNotificationsScreen
 import ru.driveeup.mobile.ui.home.DriveUpStoreAllScreen
 import ru.driveeup.mobile.ui.home.DriveUpTasksAllScreen
 import ru.driveeup.mobile.ui.home.GamesScreen
 import ru.driveeup.mobile.ui.home.ProfileScreen
 
 enum class AppPage {
-    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, DRIVE_UP_LEVELS, DRIVE_UP_STORE_ALL, DRIVE_UP_TASKS_ALL, PROFILE, GAMES, BATTLE_PASS
+    CITY, HISTORY, INTERCITY, SECURITY, SETTINGS, HELP, SUPPORT, DRIVE_UP, DRIVE_UP_LEVELS, DRIVE_UP_STORE_ALL, DRIVE_UP_TASKS_ALL, DRIVE_UP_NOTIFICATIONS, PROFILE, GAMES, BATTLE_PASS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -266,25 +267,33 @@ private fun AppContent(
                         onOpenBattlePass = { page = AppPage.BATTLE_PASS },
                         onOpenStoreAll = { page = AppPage.DRIVE_UP_STORE_ALL },
                         onOpenTasksAll = { page = AppPage.DRIVE_UP_TASKS_ALL },
-                        onOpenLoyaltyLevels = { page = AppPage.DRIVE_UP_LEVELS }
+                        onOpenLoyaltyLevels = { page = AppPage.DRIVE_UP_LEVELS },
+                        onNotifications = { page = AppPage.DRIVE_UP_NOTIFICATIONS }
                     )
                     AppPage.DRIVE_UP_LEVELS -> DriveUpLoyaltyLevelsScreen(
                         user = state.user!!,
                         token = state.token,
                         onBack = { page = AppPage.DRIVE_UP },
-                        onMenuBack = { scope.launch { drawerState.open() } }
+                        onMenuBack = { scope.launch { drawerState.open() } },
+                        onNotifications = { page = AppPage.DRIVE_UP_NOTIFICATIONS }
                     )
                     AppPage.DRIVE_UP_STORE_ALL -> DriveUpStoreAllScreen(
                         user = state.user!!,
                         token = state.token,
                         onBack = { page = AppPage.DRIVE_UP },
-                        onMenuBack = { scope.launch { drawerState.open() } }
+                        onMenuBack = { scope.launch { drawerState.open() } },
+                        onNotifications = { page = AppPage.DRIVE_UP_NOTIFICATIONS }
                     )
                     AppPage.DRIVE_UP_TASKS_ALL -> DriveUpTasksAllScreen(
                         user = state.user!!,
                         token = state.token,
                         onBack = { page = AppPage.DRIVE_UP },
-                        onMenuBack = { scope.launch { drawerState.open() } }
+                        onMenuBack = { scope.launch { drawerState.open() } },
+                        onNotifications = { page = AppPage.DRIVE_UP_NOTIFICATIONS }
+                    )
+                    AppPage.DRIVE_UP_NOTIFICATIONS -> DriveUpNotificationsScreen(
+                        token = state.token,
+                        onBack = { page = AppPage.DRIVE_UP }
                     )
                     AppPage.GAMES -> GamesScreen(
                         token = state.token,
