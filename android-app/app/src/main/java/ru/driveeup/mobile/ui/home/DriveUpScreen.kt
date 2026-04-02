@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.driveeup.mobile.R
@@ -96,7 +98,8 @@ fun DriveUpScreen(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.Top
         ) {
             Box(Modifier.fillMaxWidth()) {
                 Image(
@@ -111,12 +114,12 @@ fun DriveUpScreen(
                 Column(
                     modifier = Modifier
                         .matchParentSize()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 10.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "Привет, $displayName!",
-                        color = Color.White,
+                        color = Color.Black,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -164,9 +167,18 @@ fun DriveUpScreen(
                     .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                     .background(Color.White)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                DriveUpLoyaltySection(user = user)
+                Text(
+                    text = "К следующей поездке применится:",
+                    color = Color(0xFF1D2A08),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                DriveUpNextRideBenefitCard(tier = loyaltyTierFromRides(user.ridesCount))
                 Button(
                     onClick = onOpenGames,
                     modifier = Modifier.fillMaxWidth(),
@@ -192,5 +204,153 @@ fun DriveUpScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun DriveUpLoyaltySection(user: User) {
+    val rides = user.ridesCount
+    val tier = loyaltyTierFromRides(rides)
+    val remaining = ridesUntilNextTier(rides)
+    val pBronzeSilver = progressBronzeToSilverBar(rides)
+    val pSilverGold = progressSilverToGoldBar(rides)
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Image(
+            painter = painterResource(R.drawable.loality_bg),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter),
+            contentScale = ContentScale.FillWidth
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Поздравляем! Твой уровень:",
+                        color = Color(0xFF1D2A08),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = loyaltyTierLabel(tier),
+                        color = Color(0xFF1D2A08),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Image(
+                    painter = painterResource(loyaltyTierIconRes(tier)),
+                    contentDescription = loyaltyTierLabel(tier),
+                    modifier = Modifier
+                        .size(56.dp)
+                        .padding(start = 8.dp)
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            if (remaining != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.reyvo_run),
+                        contentDescription = null,
+                        modifier = Modifier.height(52.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(
+                        text = ridesUntilNextLevelPhrase(remaining),
+                        color = Color(0xFF1D2A08),
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp)
+                    )
+                }
+            } else {
+                Text(
+                    text = "Вы на максимальном уровне лояльности!",
+                    color = Color(0xFF1D2A08),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.loyalty_bronze),
+                    contentDescription = "Бронза",
+                    modifier = Modifier.size(36.dp)
+                )
+                LinearProgressIndicator(
+                    progress = { pBronzeSilver },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = BrandGreen,
+                    trackColor = Color(0xFFE8E8E8)
+                )
+                Image(
+                    painter = painterResource(R.drawable.loyalty_silver),
+                    contentDescription = "Серебро",
+                    modifier = Modifier.size(36.dp)
+                )
+                LinearProgressIndicator(
+                    progress = { pSilverGold },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = BrandGreen,
+                    trackColor = Color(0xFFE8E8E8)
+                )
+                Image(
+                    painter = painterResource(R.drawable.loyalty_gold),
+                    contentDescription = "Золото",
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveUpNextRideBenefitCard(tier: LoyaltyTier) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Image(
+            painter = painterResource(R.drawable.loality_bg2),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter),
+            contentScale = ContentScale.FillWidth
+        )
+        Text(
+            text = loyaltyTierRideBenefit(tier),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp)
+                .align(Alignment.Center),
+            color = BrandGreen,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }

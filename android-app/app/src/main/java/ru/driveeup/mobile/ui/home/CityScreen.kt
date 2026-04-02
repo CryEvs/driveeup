@@ -36,7 +36,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -60,7 +59,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +84,10 @@ import java.net.URL
 
 private val FieldFillGray = Color(0xFFE8E8E8)
 private val BrandGreen = Color(0xFF96EA28)
+
+/** Единый размер круглой кнопки меню и высоты блока баланса; радиус скругления прямоугольника = половина. */
+private val CityTopBarControlDp = 44.dp
+private val CityTopBarBalanceCornerDp = 22.dp
 
 private val RouteLineBlue = 0xFF29B6F6.toInt()
 private val MarkerPickUp = 0xFF29B6F6.toInt()
@@ -337,40 +339,53 @@ fun CityScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onOpenMenu) {
-                            Icon(
-                                Icons.Default.Menu,
-                                contentDescription = "Меню",
-                                tint = Color(0xFF1D2A08),
-                                modifier = Modifier.size(26.dp)
-                            )
+                        Surface(
+                            modifier = Modifier
+                                .size(CityTopBarControlDp)
+                                .clickable(onClick = onOpenMenu),
+                            shape = CircleShape,
+                            color = Color.White,
+                            shadowElevation = 2.dp
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Menu,
+                                    contentDescription = "Меню",
+                                    tint = Color(0xFF1D2A08),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         val tier = loyaltyTier(user)
-                        Row(
+                        Surface(
                             modifier = Modifier.clickable(onClick = onOpenDriveUp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            shape = RoundedCornerShape(CityTopBarBalanceCornerDp),
+                            color = Color.White,
+                            shadowElevation = 2.dp
                         ) {
-                            Image(
-                                painter = painterResource(R.drawable.ic_coin),
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Text(
-                                text = "$driveCoin",
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF1D2A08)
-                            )
-                            Image(
-                                painter = painterResource(loyaltyTierIconRes(tier)),
-                                contentDescription = loyaltyTierLabel(tier),
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Text(
-                                text = loyaltyTierLabel(tier),
-                                fontSize = 13.sp,
-                                color = Color(0xFF1D2A08)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .height(CityTopBarControlDp)
+                                    .padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.ic_coin),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = "$driveCoin",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF1D2A08)
+                                )
+                                Image(
+                                    painter = painterResource(loyaltyTierIconRes(tier)),
+                                    contentDescription = loyaltyTierLabel(tier),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
 
