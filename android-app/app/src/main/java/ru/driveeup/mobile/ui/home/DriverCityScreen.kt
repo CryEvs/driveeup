@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -384,45 +386,49 @@ fun DriverCityScreen(
 
         if (showRateSheet) {
             Box(Modifier.fillMaxSize().background(Color(0x99000000))) {
-                Column(
-                    Modifier
+                Surface(
+                    modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .background(Color.White, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .heightIn(min = 260.dp),
+                    shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+                    color = Color.White,
+                    shadowElevation = 10.dp
                 ) {
-                    Text("Оцените заказ", fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (i in 1..5) {
-                            Text(
-                                "★",
-                                fontSize = 32.sp,
-                                color = if (i <= rateStars) Color(0xFFFFC107) else Color(0xFFE0E0E0),
-                                modifier = Modifier.clickable {
-                                    rateStars = i
-                                }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                val id = lastCompletedRideId
-                                if (id != null && rateStars > 0) {
-                                    runCatching { repo.rate(token, id, rateStars, "passenger") }
-                                }
-                                showRateSheet = false
-                                rateStars = 0
-                                lastCompletedRideId = null
+                    Column(
+                        Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text("Оцените заказ", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (i in 1..5) {
+                                Text(
+                                    "★",
+                                    fontSize = 36.sp,
+                                    color = if (i <= rateStars) Color(0xFFFFC107) else Color(0xFFE0E0E0),
+                                    modifier = Modifier.clickable {
+                                        rateStars = i
+                                    }
+                                )
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0), contentColor = Color(0xFF333333))
-                    ) { Text("Пропустить") }
+                        }
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    val id = lastCompletedRideId
+                                    if (id != null && rateStars > 0) {
+                                        runCatching { repo.rate(token, id, rateStars, "passenger") }
+                                    }
+                                    showRateSheet = false
+                                    rateStars = 0
+                                    lastCompletedRideId = null
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0), contentColor = Color(0xFF333333))
+                        ) { Text("Пропустить") }
+                    }
                 }
             }
         }
@@ -470,7 +476,12 @@ private fun DriverNewOrderMapCard(ride: RideOrder) {
     }
 
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Column(Modifier.weight(1f)) {
                 Text("До точки A", fontSize = 11.sp, color = Color(0xFF7E8580))
                 Text(
@@ -493,20 +504,26 @@ private fun DriverNewOrderMapCard(ride: RideOrder) {
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
-        AndroidView(
-            factory = { ctx ->
-                MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    controller.setZoom(12.0)
-                    mapView = this
-                }
-            },
+        Spacer(Modifier.height(8.dp))
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp)
-        )
+                .height(200.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFE8E8E8))
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    MapView(ctx).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        controller.setZoom(12.0)
+                        mapView = this
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 
     DisposableEffect(ride.id) {
@@ -780,14 +797,36 @@ private fun DriverActiveTripOverlay(
         }
     }
 
+    val bottomSheetMinHeight = when (local.status) {
+        "accepted" -> 272.dp
+        "at_pickup" -> 228.dp
+        else -> 212.dp
+    }
+
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+        AndroidView(
+            factory = { ctx ->
+                MapView(ctx).apply {
+                    setTileSource(TileSourceFactory.MAPNIK)
+                    setMultiTouchControls(true)
+                    controller.setZoom(12.0)
+                    mapView = this
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             if (local.status == "accepted") {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
                     color = Color.White,
                     shadowElevation = 4.dp
                 ) {
@@ -802,122 +841,114 @@ private fun DriverActiveTripOverlay(
             }
             if (local.passengerExiting) {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    color = Color(0xFFE3F2FD),
-                    shape = RoundedCornerShape(10.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp
                 ) {
                     Text(
                         "Пассажир выходит к вам",
-                        modifier = Modifier.padding(12.dp),
-                        color = Color(0xFF1565C0),
+                        modifier = Modifier.padding(14.dp),
+                        color = Color(0xFF1D2A08),
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        fontSize = 15.sp
                     )
                 }
-                Spacer(Modifier.height(8.dp))
             }
             if (local.status == "at_pickup" && pickupWaitSec > 0) {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    color = Color(0xFFFFF8E1),
-                    shape = RoundedCornerShape(10.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp
                 ) {
                     val mm = pickupWaitSec / 60
                     val ss = pickupWaitSec % 60
                     Text(
                         "Ожидание пассажира: ${String.format("%d:%02d", mm, ss)}",
-                        modifier = Modifier.padding(12.dp),
-                        color = Color(0xFF6D4C41),
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier.padding(14.dp),
+                        color = Color(0xFF6C6C6C),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .heightIn(min = bottomSheetMinHeight),
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            color = Color.White,
+            shadowElevation = 10.dp
+        ) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Отменить поездку",
+                        color = Color(0xFFE53935),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable {
+                            scope.launch {
+                                runCatching {
+                                    repo.cancelDriver(token, local.id)
+                                    onCancelled()
+                                }
+                            }
+                        }
                     )
                 }
                 Spacer(Modifier.height(8.dp))
-            }
-            AndroidView(
-                factory = { ctx ->
-                    MapView(ctx).apply {
-                        setTileSource(TileSourceFactory.MAPNIK)
-                        setMultiTouchControls(true)
-                        controller.setZoom(12.0)
-                        mapView = this
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(3f)
-            )
-            Surface(
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                color = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            "Отменить поездку",
-                            color = Color(0xFFE53935),
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable {
-                                scope.launch {
-                                    runCatching {
-                                        repo.cancelDriver(token, local.id)
-                                        onCancelled()
-                                    }
+                Text(shortAddr(local.fromAddress), fontWeight = FontWeight.Bold)
+                Text(shortAddr(local.toAddress), color = Color.Gray, fontSize = 13.sp)
+                Text("${local.displayPriceRub} Р", color = BrandDark, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                when (local.status) {
+                    "accepted" -> Button(
+                        onClick = {
+                            scope.launch {
+                                runCatching {
+                                    local = repo.arrived(token, local.id)
                                 }
                             }
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(shortAddr(local.fromAddress), fontWeight = FontWeight.Bold)
-                    Text(shortAddr(local.toAddress), color = Color.Gray, fontSize = 13.sp)
-                    Text("${local.displayPriceRub} Р", color = BrandDark, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(10.dp))
-                    when (local.status) {
-                        "accepted" -> Button(
-                            onClick = {
-                                scope.launch {
-                                    runCatching {
-                                        local = repo.arrived(token, local.id)
-                                    }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BlueRoute)
+                    ) { Text("Я на месте") }
+                    "at_pickup" -> Button(
+                        onClick = {
+                            scope.launch {
+                                runCatching {
+                                    local = repo.startTrip(token, local.id)
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = BlueRoute)
-                        ) { Text("Я на месте") }
-                        "at_pickup" -> Button(
-                            onClick = {
-                                scope.launch {
-                                    runCatching {
-                                        local = repo.startTrip(token, local.id)
-                                    }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Brand)
+                    ) { Text("Начать поездку") }
+                    "in_trip" -> Button(
+                        onClick = {
+                            scope.launch {
+                                runCatching {
+                                    repo.complete(token, local.id)
+                                    onCompleted(local.id)
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Brand)
-                        ) { Text("Начать поездку") }
-                        "in_trip" -> Button(
-                            onClick = {
-                                scope.launch {
-                                    runCatching {
-                                        repo.complete(token, local.id)
-                                        onCompleted(local.id)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Brand)
-                        ) { Text("Завершить поездку") }
-                    }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Brand)
+                    ) { Text("Завершить поездку") }
                 }
             }
         }

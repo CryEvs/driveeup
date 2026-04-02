@@ -1,5 +1,5 @@
 const KEY = 'driveeup_cross_road_cooldown_until'
-const DURATION_MS = 60 * 1000
+const DURATION_MS = 5 * 1000
 
 export function getCrossRoadCooldownRemaining() {
   const until = Number(localStorage.getItem(KEY) || 0)

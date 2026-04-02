@@ -134,7 +134,8 @@ private fun parseEvaluateJavascriptLong(raw: String?): Long {
 fun GamesScreen(
     token: String,
     userRole: UserRole,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToCity: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val rideRepo = remember { RideRepository() }
@@ -160,14 +161,17 @@ fun GamesScreen(
         }
         while (true) {
             val active = runCatching { rideRepo.passengerActive(token) }.getOrNull()
-            waitingTaxi = active?.status == "accepted"
-            delay(2500)
-        }
-    }
-
-    LaunchedEffect(waitingTaxi, showGame) {
-        if (showGame && !waitingTaxi) {
-            closeGameDialog()
+            val st = active?.status
+            waitingTaxi = st == "accepted"
+            if (st == "at_pickup" || st == "in_trip") {
+                closeGameDialog()
+                onNavigateToCity()
+                return@LaunchedEffect
+            }
+            if (!waitingTaxi) {
+                closeGameDialog()
+            }
+            delay(400)
         }
     }
 

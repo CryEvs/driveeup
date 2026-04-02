@@ -299,7 +299,8 @@ private fun AppContent(
                     AppPage.GAMES -> GamesScreen(
                         token = state.token,
                         userRole = state.user?.role ?: UserRole.PASSENGER,
-                        onBack = { page = AppPage.DRIVE_UP }
+                        onBack = { page = AppPage.DRIVE_UP },
+                        onNavigateToCity = { page = AppPage.CITY }
                     )
                     AppPage.BATTLE_PASS -> BattlePassScreen(
                         token = state.token,
