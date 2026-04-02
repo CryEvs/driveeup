@@ -276,9 +276,11 @@ fun CityScreen(
         }
     }
 
+    val searchingDrivers = activeRide?.status == "searching"
+
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxWidth().weight(3f)) {
+            Box(modifier = Modifier.fillMaxWidth().weight(if (searchingDrivers) 1f else 3f)) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
@@ -394,6 +396,7 @@ fun CityScreen(
                 }
             }
 
+            if (!searchingDrivers) {
             Card(
                 modifier = Modifier.fillMaxWidth().weight(2f),
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
@@ -479,6 +482,7 @@ fun CityScreen(
                     ) { Text("Заказать") }
                 }
             }
+            }
         }
 
         val ride = activeRide
@@ -486,7 +490,17 @@ fun CityScreen(
             when (ride.status) {
                 "searching" -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                        PassengerSearchingBottomSheet(ride.displayPriceRub)
+                        PassengerSearchingBottomSheet(
+                            priceRub = ride.displayPriceRub,
+                            onCancelSearch = {
+                                uiScope.launch {
+                                    runCatching {
+                                        rideRepo.cancelPassenger(token, ride.id)
+                                        activeRide = null
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
                 "accepted", "at_pickup" -> {

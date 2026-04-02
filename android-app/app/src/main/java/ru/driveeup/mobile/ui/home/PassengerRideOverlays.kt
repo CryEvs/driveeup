@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import ru.driveeup.mobile.domain.RideOrder
 
 @Composable
-fun PassengerSearchingBottomSheet(priceRub: Int) {
+fun PassengerSearchingBottomSheet(priceRub: Int, onCancelSearch: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -38,24 +41,44 @@ fun PassengerSearchingBottomSheet(priceRub: Int) {
         color = Color.White,
         tonalElevation = 6.dp
     ) {
-        Column(
-            Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "Ищем водителей...",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color(0xFF1D2A08)
-            )
+        Column(Modifier.padding(20.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Ищем водителей...",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF1D2A08),
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(onClick = onCancelSearch),
+                    shape = CircleShape,
+                    color = Color(0xFFF0F0F0)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Отменить поиск",
+                        modifier = Modifier.padding(10.dp),
+                        tint = Color(0xFF757575)
+                    )
+                }
+            }
             Spacer(Modifier.height(12.dp))
-            Text("Ваша цена", color = Color(0xFF7E8580), fontSize = 14.sp)
-            Text(
-                "$priceRub Р",
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                color = Color(0xFF1D2A08)
-            )
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Ваша цена", color = Color(0xFF7E8580), fontSize = 14.sp)
+                Text(
+                    "$priceRub Р",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    color = Color(0xFF1D2A08)
+                )
+            }
         }
     }
 }
