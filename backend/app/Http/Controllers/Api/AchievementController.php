@@ -28,10 +28,8 @@ class AchievementController extends Controller
             'id' => $a->id,
             'title' => $a->title,
             'description' => $a->description,
-            'iconUrl' => $a->icon_url,
+            'iconUrl' => $this->absoluteAchievementIconUrl($a->icon_url),
             'sortOrder' => (int) $a->sort_order,
-            'awardType' => $a->award_type,
-            'ridesRequired' => $a->rides_required !== null ? (int) $a->rides_required : null,
         ])->values());
     }
 
@@ -145,6 +143,25 @@ class AchievementController extends Controller
         return response()->json([
             'iconUrl' => url('/api/achievements/icons/' . rawurlencode($relativePath)),
         ], 201);
+    }
+
+    /**
+     * Публичный URL иконки для клиентов (относительные пути и старые записи без схемы).
+     */
+    private function absoluteAchievementIconUrl(?string $raw): ?string
+    {
+        if ($raw === null || trim($raw) === '') {
+            return null;
+        }
+        $raw = trim($raw);
+        if (preg_match('#^https?://#i', $raw)) {
+            return $raw;
+        }
+        if (str_starts_with($raw, '/')) {
+            return url($raw);
+        }
+
+        return url('/'.ltrim($raw, '/'));
     }
 
     /**

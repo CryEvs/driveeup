@@ -181,26 +181,7 @@ private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier
                     textAlign = TextAlign.Center,
                     maxLines = 6
                 )
-                achievementAwardCaption(item)?.let { cap ->
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        cap,
-                        color = Color(0xFF5C6B4A),
-                        fontSize = 10.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2
-                    )
-                }
             }
         }
-    }
-}
-
-private fun achievementAwardCaption(item: AchievementItem): String? {
-    return when (item.awardType) {
-        "RIDES" -> item.ridesRequired?.let { n -> "Условие: проехать $n поездок" }
-        "INITIAL" -> "Начальное достижение"
-        "EVERYONE" -> "Получено у всех"
-        else -> null
     }
 }

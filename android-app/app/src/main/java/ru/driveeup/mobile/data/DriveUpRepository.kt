@@ -179,18 +179,24 @@ class DriveUpRepository {
     )
 
     private fun parseAchievement(json: JSONObject): AchievementItem {
-        val rides = when {
-            !json.has("ridesRequired") || json.isNull("ridesRequired") -> null
-            else -> json.optInt("ridesRequired").takeIf { it > 0 }
-        }
+        val rawIcon = json.optString("iconUrl").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+            ?: json.optString("icon_url").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
         return AchievementItem(
             id = json.optLong("id"),
             title = json.optString("title"),
             description = json.optString("description"),
-            iconUrl = json.optString("iconUrl").takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) },
-            awardType = json.optString("awardType").takeUnless { it.isBlank() },
-            ridesRequired = rides,
+            iconUrl = resolvePublicAssetUrl(rawIcon),
         )
+    }
+
+    /** Абсолютный URL для картинок (относительные пути относительно сайта, не только /api). */
+    private fun resolvePublicAssetUrl(raw: String?): String? {
+        val s = raw?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        if (s.startsWith("http://", ignoreCase = true) || s.startsWith("https://", ignoreCase = true)) {
+            return s
+        }
+        val origin = apiBase.trimEnd('/').removeSuffix("/api")
+        return if (s.startsWith("/")) origin + s else "$origin/$s"
     }
 
     private fun parseNotification(json: JSONObject): DriveUpNotification = DriveUpNotification(
