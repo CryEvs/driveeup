@@ -248,7 +248,7 @@ private fun DarkListBase(
     onTitleBack: () -> Unit,
     onMenuBack: () -> Unit,
     onNotifications: () -> Unit,
-    content: @Composable androidx.compose.foundation.lazy.LazyListScope.() -> Unit
+    content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(DriveUpDarkBg)) {
         DriveUpTopBar(onBack = onMenuBack, onNotifications = onNotifications, dark = true)
