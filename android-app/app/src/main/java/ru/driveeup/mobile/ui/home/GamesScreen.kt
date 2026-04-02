@@ -69,7 +69,7 @@ private const val KEY_COOLDOWN_UNTIL = "cross_road_cooldown_until"
 /** Как в AppScaffold: тот же JWT для WebView → authContext (readStoredOrAndroidToken). */
 private const val AUTH_PREFS = "driveeup_prefs"
 private const val KEY_AUTH_TOKEN = "token"
-private const val COOLDOWN_MS = 60_000L
+private const val COOLDOWN_MS = 5_000L
 /** Не даём сохранить заведомо битый timestamp (секунды вместо мс, лишние нули и т.д.). */
 private const val MAX_COOLDOWN_MS = 7L * 24 * 60 * 60 * 1000
 
@@ -87,9 +87,7 @@ private fun normalizeCooldownUntilMs(raw: Long, now: Long): Long {
         u /= 1000L
         guard++
     }
-    if (u > now + MAX_COOLDOWN_MS) {
-        return (now + COOLDOWN_MS).coerceAtMost(now + MAX_COOLDOWN_MS)
-    }
+    if (u > now + MAX_COOLDOWN_MS) return 0L
     if (u < now - 86_400_000L * 2L) return 0L
     return u
 }
@@ -145,7 +143,6 @@ fun GamesScreen(
     var waitingTaxi by remember { mutableStateOf(false) }
 
     fun closeGameDialog() {
-        startCooldownNative(context)
         showGame = false
     }
 
@@ -284,7 +281,7 @@ fun GamesScreen(
                                                             "}" +
                                                             "}catch(e){}" +
                                                             "}" +
-                                                            "var u=Math.max(p,ls);" +
+                                                            "var u=(p>Date.now())?p:0;" +
                                                             "var now=Date.now();" +
                                                             "if(u>now){localStorage.setItem(k,String(u));}else{try{localStorage.removeItem(k);}catch(e){}}" +
                                                             "return u;}catch(e){return 0;}})()"
