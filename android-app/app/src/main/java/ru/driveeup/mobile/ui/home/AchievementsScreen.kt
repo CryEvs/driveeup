@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -126,7 +127,7 @@ fun AchievementsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     row.forEach { ach ->
-                        AchievementCard(ach, Modifier.weight(1f))
+                        AchievementCard(ach, token = token, modifier = Modifier.weight(1f))
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
@@ -135,8 +136,39 @@ fun AchievementsScreen(
     }
 }
 
+private fun achievementImageRequestHeaders(token: String, imageUrl: String): Headers {
+    val b =
+        Headers.Builder()
+            .add(
+                "User-Agent",
+                "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 DriveUP/1.0"
+            )
+            .add("Accept", "image/avif,image/webp,image/apng,image/png,image/jpeg,image/svg+xml,image/*,*/*;q=0.8")
+    if (token.isNotBlank()) {
+        b.add("Authorization", "Bearer $token")
+    }
+    try {
+        val uri = java.net.URI(imageUrl)
+        val scheme = uri.scheme ?: "https"
+        val host = uri.host
+        if (host != null) {
+            val port = uri.port
+            val origin =
+                if (port > 0 && port != 80 && port != 443) {
+                    "$scheme://$host:$port"
+                } else {
+                    "$scheme://$host"
+                }
+            b.add("Referer", "$origin/")
+        }
+    } catch (_: Exception) {
+        b.add("Referer", "https://driveeup.ru/")
+    }
+    return b.build()
+}
+
 @Composable
-private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier) {
+private fun AchievementCard(item: AchievementItem, token: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val iconPainter = painterResource(R.drawable.ic_coin)
     Surface(
@@ -163,21 +195,14 @@ private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(item.iconUrl)
-                            .headers(
-                                Headers.headersOf(
-                                    "User-Agent",
-                                    "DriveUP-Android/1.0 (Coil; achievements)",
-                                    "Accept",
-                                    "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
-                                )
-                            )
+                            .headers(achievementImageRequestHeaders(token, item.iconUrl))
                             .allowHardware(false)
                             .crossfade(true)
                             .build(),
                         contentDescription = null,
                         modifier = Modifier.size(52.dp),
                         contentScale = ContentScale.Fit,
-                        placeholder = iconPainter,
+                        placeholder = ColorPainter(Color.Transparent),
                         error = iconPainter
                     )
                 } else {
