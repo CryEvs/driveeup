@@ -8,7 +8,8 @@ import android.util.Log
  * - отдача файла: GET /api/achievements/icons/{path} → файл из `storage/app/public/achievement-icons/{path}`;
  * - в JSON списка: поле `iconUrl` (camelCase), абсолютный https URL.
  *
- * Допустим также `/storage/achievement-icons/...` если в БД старая ссылка.
+ * Старые ссылки `/storage/achievement-icons/...` в приложении приводим к `/api/achievements/icons/...`:
+ * иначе фронтовой nginx часто отдаёт `index.html` (React), а не файл — Coil получает HTML вместо PNG.
  */
 object AchievementIconUrl {
     private const val TAG = "AchievementIconUrl"
@@ -25,7 +26,13 @@ object AchievementIconUrl {
      * Приводит значение из JSON к абсолютному https URL или возвращает null, если ссылка небезопасна/битая.
      */
     fun normalize(raw: String?, apiBase: String = DEFAULT_API_BASE): String? {
-        val s = raw?.trim()?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) } ?: return null
+        val s =
+            raw
+                ?.trim()
+                ?.removePrefix("\uFEFF")
+                ?.trim()
+                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+                ?: return null
 
         if (s.contains("javascript:", ignoreCase = true) || s.contains("data:text/html", ignoreCase = true)) {
             Log.w(TAG, "отклонён небезопасный URL")
@@ -43,6 +50,7 @@ object AchievementIconUrl {
 
         url = upgradeHttpToHttpsIfApiUsesHttps(url, apiBase)
         url = rewriteLocalhostToSiteOrigin(url, siteOrigin)
+        url = rewriteAchievementStorageUrlToApi(url, siteOrigin)
 
         val uri = try {
             java.net.URI(url)
@@ -67,7 +75,16 @@ object AchievementIconUrl {
             Log.w(TAG, "неожиданный path (всё равно пробуем загрузить): $path")
         }
 
-        return url
+        // Убираем ?query и #fragment — для статики они часто ломают совпадение пути (404), в JSON иногда мусор.
+        return stripQueryAndFragment(url)
+    }
+
+    /** Удаляет `?…` и `#…` — Coil/OkHttp иначе могут запросить другой ресурс, чем в браузере по «чистому» URL. */
+    private fun stripQueryAndFragment(url: String): String {
+        val cutHash = url.indexOf('#').takeIf { it >= 0 } ?: url.length
+        val noHash = url.substring(0, cutHash)
+        val q = noHash.indexOf('?')
+        return if (q >= 0) noHash.substring(0, q) else noHash
     }
 
     private fun siteOriginFromApiBase(apiBase: String): String {
@@ -106,32 +123,24 @@ object AchievementIconUrl {
     }
 
     /**
-     * Несколько эквивалентных URL для одного файла (тот же файл в `storage/app/public/achievement-icons/`).
-     * На части серверов/клиентов запрос к `/api/achievements/icons/…` даёт 404, а
-     * `/storage/achievement-icons/…` отдаётся nginx как статика — или наоборот. Пробуем по очереди.
+     * `/storage/achievement-icons/x` на проде часто попадает под SPA (отдаётся HTML) — грузим только через Laravel API.
      */
-    fun loadCandidates(absoluteUrl: String, apiBase: String = DEFAULT_API_BASE): List<String> {
-        val site = siteOriginFromApiBase(apiBase).trimEnd('/')
-        val uri = try {
-            java.net.URI(absoluteUrl)
+    private fun rewriteAchievementStorageUrlToApi(fullUrl: String, siteOrigin: String): String {
+        return try {
+            val uri = java.net.URI(fullUrl)
+            val path = uri.path ?: return fullUrl
+            val storagePrefix = "/storage/achievement-icons/"
+            if (!path.startsWith(storagePrefix)) {
+                return fullUrl
+            }
+            val name = path.removePrefix(storagePrefix).trimStart('/')
+            if (name.isEmpty() || name.contains('/')) {
+                return fullUrl
+            }
+            val origin = siteOrigin.trimEnd('/')
+            "$origin/api/achievements/icons/$name"
         } catch (_: Exception) {
-            return listOf(absoluteUrl)
+            fullUrl
         }
-        val path = uri.path ?: return listOf(absoluteUrl)
-        val apiPrefix = "/api/achievements/icons/"
-        val storagePrefix = "/storage/achievement-icons/"
-
-        if (path.startsWith(storagePrefix)) {
-            return listOf(absoluteUrl)
-        }
-        if (!path.startsWith(apiPrefix)) {
-            return listOf(absoluteUrl)
-        }
-        val filename = path.removePrefix(apiPrefix).trimStart('/')
-        if (filename.isEmpty() || filename.contains('/')) {
-            return listOf(absoluteUrl)
-        }
-        val storageUrl = "$site$storagePrefix$filename"
-        return listOf(storageUrl, absoluteUrl)
     }
 }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -170,33 +169,42 @@ private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.FillBounds
             )
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AchievementIconImage(
-                    iconUrl = item.iconUrl,
-                    achievementId = item.id,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    item.title,
-                    color = Color(0xFF1D2A08),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    item.description,
-                    color = Color.Gray.copy(alpha = 0.95f),
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 6
-                )
+            Column(Modifier.fillMaxSize()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 5.dp, vertical = 5.dp)
+                ) {
+                    AchievementIconImage(
+                        iconUrl = item.iconUrl,
+                        achievementId = item.id,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        item.title,
+                        color = Color(0xFF1D2A08),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        item.description,
+                        color = Color.Gray.copy(alpha = 0.95f),
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 6
+                    )
+                }
             }
         }
     }
