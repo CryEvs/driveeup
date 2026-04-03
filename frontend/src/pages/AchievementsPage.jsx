@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react'
 import { API_BASE } from '../authContext.jsx'
 
-/** Абсолютный URL иконки: относительные пути от текущего origin (прокси /api). */
+/** Абсолютный URL иконки: относительные пути, подмена localhost в ссылках с бэкенда. */
 function achievementIconSrc(iconUrl) {
   if (!iconUrl || typeof iconUrl !== 'string') return null
   const s = iconUrl.trim()
   if (!s || s === 'null') return null
-  if (/^https?:\/\//i.test(s)) return s
   if (typeof window !== 'undefined' && s.startsWith('/')) {
     return window.location.origin + s
+  }
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s)
+      const bad = u.hostname === 'localhost' || u.hostname === '127.0.0.1'
+      if (bad && (u.pathname.startsWith('/api/') || u.pathname.startsWith('/storage/'))) {
+        return window.location.origin + u.pathname + u.search + u.hash
+      }
+    } catch {
+      /* ignore */
+    }
+    return s
   }
   return s
 }

@@ -35,12 +35,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import okhttp3.Headers
 import ru.driveeup.mobile.R
 import ru.driveeup.mobile.data.DriveUpRepository
 import ru.driveeup.mobile.domain.AchievementItem
@@ -134,6 +137,8 @@ fun AchievementsScreen(
 
 @Composable
 private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val iconPainter = painterResource(R.drawable.ic_coin)
     Surface(
         modifier = modifier.width(185.dp).height(220.dp),
         shape = RoundedCornerShape(BrandCornerRadius),
@@ -156,10 +161,24 @@ private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier
             ) {
                 if (item.iconUrl != null) {
                     AsyncImage(
-                        model = item.iconUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(item.iconUrl)
+                            .headers(
+                                Headers.headersOf(
+                                    "User-Agent",
+                                    "DriveUP-Android/1.0 (Coil; achievements)",
+                                    "Accept",
+                                    "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
+                                )
+                            )
+                            .allowHardware(false)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = null,
                         modifier = Modifier.size(52.dp),
-                        contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Fit,
+                        placeholder = iconPainter,
+                        error = iconPainter
                     )
                 } else {
                     Spacer(Modifier.height(52.dp))

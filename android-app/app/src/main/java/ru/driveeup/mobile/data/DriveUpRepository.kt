@@ -189,14 +189,44 @@ class DriveUpRepository {
         )
     }
 
-    /** Абсолютный URL для картинок (относительные пути относительно сайта, не только /api). */
+    /** Абсолютный URL иконки: localhost→origin, http→https если API на https (иначе Android режет cleartext). */
     private fun resolvePublicAssetUrl(raw: String?): String? {
         val s = raw?.trim()?.takeIf { it.isNotBlank() } ?: return null
-        if (s.startsWith("http://", ignoreCase = true) || s.startsWith("https://", ignoreCase = true)) {
-            return s
-        }
         val origin = apiBase.trimEnd('/').removeSuffix("/api")
-        return if (s.startsWith("/")) origin + s else "$origin/$s"
+        val merged = when {
+            s.startsWith("http://", ignoreCase = true) || s.startsWith("https://", ignoreCase = true) ->
+                rewriteLocalhostIconUrl(s, origin)
+            s.startsWith("/") -> origin + s
+            else -> "$origin/$s"
+        }
+        return upgradeToHttpsIfApiUsesHttps(merged)
+    }
+
+    private fun upgradeToHttpsIfApiUsesHttps(url: String): String {
+        if (!apiBase.startsWith("https://", ignoreCase = true)) return url
+        if (!url.startsWith("http://", ignoreCase = true)) return url
+        return "https://" + url.substring(7)
+    }
+
+    private fun rewriteLocalhostIconUrl(fullUrl: String, apiOrigin: String): String {
+        return try {
+            val uri = java.net.URI(fullUrl)
+            val host = uri.host?.lowercase() ?: return fullUrl
+            val badHost =
+                host == "localhost" ||
+                    host == "127.0.0.1" ||
+                    host == "10.0.2.2" ||
+                    host.endsWith(".localhost")
+            val path = uri.rawPath ?: return fullUrl
+            val query = uri.rawQuery?.let { "?$it" } ?: ""
+            if (badHost && (path.startsWith("/api/") || path.startsWith("/storage/"))) {
+                apiOrigin.trimEnd('/') + path + query
+            } else {
+                fullUrl
+            }
+        } catch (_: Exception) {
+            fullUrl
+        }
     }
 
     private fun parseNotification(json: JSONObject): DriveUpNotification = DriveUpNotification(

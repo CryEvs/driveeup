@@ -138,15 +138,18 @@ class AchievementController extends Controller
         ]);
 
         $path = $validated['icon']->store('achievement-icons', 'public');
+        // URL через API — файл читается с диска в iconFile(), не нужен storage:link в public/.
         $relativePath = ltrim(str_replace('achievement-icons/', '', $path), '/');
 
         return response()->json([
-            'iconUrl' => url('/api/achievements/icons/' . rawurlencode($relativePath)),
+            'iconUrl' => $this->forceHttpsIfAppUsesHttps(
+                url('/api/achievements/icons/'.rawurlencode($relativePath))
+            ),
         ], 201);
     }
 
     /**
-     * Публичный URL иконки для клиентов (относительные пути и старые записи без схемы).
+     * Абсолютный URL для клиентов и превью в админке (без подмены на /storage/ — symlink может отсутствовать).
      */
     private function absoluteAchievementIconUrl(?string $raw): ?string
     {
@@ -155,13 +158,26 @@ class AchievementController extends Controller
         }
         $raw = trim($raw);
         if (preg_match('#^https?://#i', $raw)) {
-            return $raw;
+            return $this->forceHttpsIfAppUsesHttps($raw);
         }
         if (str_starts_with($raw, '/')) {
-            return url($raw);
+            return $this->forceHttpsIfAppUsesHttps(url($raw));
         }
 
-        return url('/'.ltrim($raw, '/'));
+        return $this->forceHttpsIfAppUsesHttps(url('/'.ltrim($raw, '/')));
+    }
+
+    /**
+     * Android по умолчанию блокирует cleartext: если APP_URL на https, а url() вернул http — подменяем схему.
+     */
+    private function forceHttpsIfAppUsesHttps(string $url): string
+    {
+        $appUrl = (string) config('app.url', '');
+        if ($appUrl !== '' && str_starts_with($appUrl, 'https://') && str_starts_with($url, 'http://')) {
+            return 'https://'.substr($url, strlen('http://'));
+        }
+
+        return $url;
     }
 
     /**
