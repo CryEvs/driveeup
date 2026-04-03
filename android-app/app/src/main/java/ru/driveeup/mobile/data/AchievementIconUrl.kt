@@ -104,4 +104,34 @@ object AchievementIconUrl {
     private fun isAllowedIconPath(path: String): Boolean {
         return allowedPathPrefixes.any { path.startsWith(it) }
     }
+
+    /**
+     * Несколько эквивалентных URL для одного файла (тот же файл в `storage/app/public/achievement-icons/`).
+     * На части серверов/клиентов запрос к `/api/achievements/icons/…` даёт 404, а
+     * `/storage/achievement-icons/…` отдаётся nginx как статика — или наоборот. Пробуем по очереди.
+     */
+    fun loadCandidates(absoluteUrl: String, apiBase: String = DEFAULT_API_BASE): List<String> {
+        val site = siteOriginFromApiBase(apiBase).trimEnd('/')
+        val uri = try {
+            java.net.URI(absoluteUrl)
+        } catch (_: Exception) {
+            return listOf(absoluteUrl)
+        }
+        val path = uri.path ?: return listOf(absoluteUrl)
+        val apiPrefix = "/api/achievements/icons/"
+        val storagePrefix = "/storage/achievement-icons/"
+
+        if (path.startsWith(storagePrefix)) {
+            return listOf(absoluteUrl)
+        }
+        if (!path.startsWith(apiPrefix)) {
+            return listOf(absoluteUrl)
+        }
+        val filename = path.removePrefix(apiPrefix).trimStart('/')
+        if (filename.isEmpty() || filename.contains('/')) {
+            return listOf(absoluteUrl)
+        }
+        val storageUrl = "$site$storagePrefix$filename"
+        return listOf(storageUrl, absoluteUrl)
+    }
 }

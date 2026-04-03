@@ -35,11 +35,9 @@ Route::post('/game/claim-drivee-coin', [GameRewardController::class, 'claimDrive
 Route::post('/game/claim-drive-coin', [GameRewardController::class, 'claimDriveeCoin']);
 
 Route::get('/battle-pass/current', [BattlePassController::class, 'current']);
-Route::get('/battle-pass/level-icons/{path}', [BattlePassController::class, 'levelIcon'])->where('path', '.*');
 Route::post('/battle-pass/levels/{level}/claim-gift', [BattlePassController::class, 'claimLevelGift']);
 
 Route::get('/achievements', [AchievementController::class, 'index']);
-Route::get('/achievements/icons/{path}', [AchievementController::class, 'iconFile'])->where('path', '.*');
 
 Route::get('/driveup/content', [DriveupController::class, 'content']);
 Route::get('/driveup/store/items', [DriveupController::class, 'storeItems']);

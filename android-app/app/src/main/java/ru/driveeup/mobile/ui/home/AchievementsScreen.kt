@@ -145,7 +145,7 @@ fun AchievementsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     row.forEach { ach ->
-                        AchievementCard(ach, token = token, modifier = Modifier.weight(1f))
+                        AchievementCard(ach, modifier = Modifier.weight(1f))
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
@@ -155,7 +155,7 @@ fun AchievementsScreen(
 }
 
 @Composable
-private fun AchievementCard(item: AchievementItem, token: String, modifier: Modifier = Modifier) {
+private fun AchievementCard(item: AchievementItem, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.width(185.dp).height(220.dp),
         shape = RoundedCornerShape(BrandCornerRadius),
@@ -178,7 +178,6 @@ private fun AchievementCard(item: AchievementItem, token: String, modifier: Modi
             ) {
                 AchievementIconImage(
                     iconUrl = item.iconUrl,
-                    token = token,
                     achievementId = item.id,
                 )
                 Spacer(Modifier.height(8.dp))
